@@ -13,6 +13,8 @@ var JS = _interopRequireWildcard(require("./external/YourJS.min"));
 
 var _helperFunctions = require("./helper-functions");
 
+var Vue = _interopRequireWildcard(require("./external/vue.min"));
+
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
@@ -39,6 +41,7 @@ var DEFAULT_PANEL_SETTINGS = {
   html: '',
   css: '& {\n  overflow: auto;\n}'
 };
+var PANEL_PROP_KEYS = ['fullscreen', 'datasource', 'description', 'targets', 'timeFrom', 'timeShift', 'title', 'transparent'];
 
 var VueHtmlPanelCtrl =
 /*#__PURE__*/
@@ -63,6 +66,7 @@ function (_MetricsPanelCtrl) {
 
     _this.events.on('view-mode-changed', _this.onViewModeChanged.bind(_assertThisInitialized(_this))); // Additional events that we can hook into...
     // this.events.on('render', this.onRender.bind(this));
+    // this.events.on('refresh', this.onRefresh.bind(this));
     // this.events.on('data-error', this.onDataError.bind(this));
     // this.events.on('init-panel-actions', this.onInitPanelActions.bind(this));
     // this.events.on('panel-size-changed', this.onPanelSizeChanged.bind(this));
@@ -111,35 +115,47 @@ function (_MetricsPanelCtrl) {
   }, {
     key: "updateView",
     value: function updateView() {
-      var _this2 = this;
+      var ctrl = this;
+      var jElemPC = ctrl.panelElement;
+      var elemPC = jElemPC[0];
+      var elem = JS.dom({
+        _: 'div'
+      });
+      var panel = ctrl.panel;
+      var cls = ('_' + Math.random()).replace(/0\./, +new Date());
+      jElemPC.html('').append(elem);
+      elemPC.className = elemPC.className.replace(/(^|\s+)_\d+(?=\s+|$)/g, ' ').trim() + ' ' + cls; // Data available to the HTML code.
 
-      var jElem = this.panelElement;
-      var panel = this.panel; // Data available to the HTML code.
+      var vueScope = ctrl.getVueScope();
 
-      var vueScope = this.getVueScope();
-      (0, _helperFunctions.vueToHTML)(panel.html, vueScope, function (html) {
-        var elem = jElem[0]; // Adds the HTML that the user entered onto the panel after interpreting
-        // any Vue.js syntax.
+      if (ctrl.vue) {
+        ctrl.vue.$destroy();
+      }
 
-        jElem.html(html); // Remove the old stylesheet from the document if it exists.
+      ctrl.vue = new Vue({
+        template: "<div>".concat(panel.html, "</div>"),
+        el: elem,
+        data: vueScope,
+        mounted: function mounted() {
+          // Remove the old stylesheet from the document if it exists.
+          var stylesheet = ctrl.stylesheet;
+          var styleParent = stylesheet && stylesheet.parentNode;
 
-        var stylesheet = _this2.stylesheet;
-        var styleParent = stylesheet && stylesheet.parentNode;
-
-        if (styleParent) {
-          styleParent.removeChild(stylesheet);
-        } // Remove the old class names added by YourJS.css().
+          if (styleParent) {
+            styleParent.removeChild(stylesheet);
+          } // Add the nested CSS to the panel.
 
 
-        elem.className = elem.className.replace(/(^|\s+)_\d+(?=\s+|$)/g, ' ').trim(); // Add the nested CSS to the panel.
-
-        _this2.stylesheet = JS.css(JSON.parse((0, _helperFunctions.pseudoCssToJSON)(panel.css)), elem);
-      }, // If an error occurs then it should be logged as such.
-      function (err, info) {
-        console.error('VueHtmlPanelCtrl error:', {
-          err: err,
-          info: info
-        });
+          ctrl.stylesheet = JS.css(JSON.parse((0, _helperFunctions.pseudoCssToJSON)(panel.css)), '.' + cls);
+        },
+        methods: {
+          onError: function onError(err, info) {
+            console.error('VueHtmlPanelCtrl error:', {
+              err: err,
+              info: info
+            });
+          }
+        }
       });
     }
     /**
@@ -153,7 +169,7 @@ function (_MetricsPanelCtrl) {
     value: function getVueScope() {
       return _lodash.default.cloneDeep({
         dataset: this.dataList,
-        panel: this.panel
+        panel: _lodash.default.pick(this.panel, PANEL_PROP_KEYS)
       });
     }
     /**
@@ -218,8 +234,16 @@ function (_MetricsPanelCtrl) {
   }]);
 
   return VueHtmlPanelCtrl;
-}(_sdk.MetricsPanelCtrl);
+}(_sdk.MetricsPanelCtrl); // Allows for error handling in vueToHTML().
+
 
 exports.VueHtmlPanelCtrl = VueHtmlPanelCtrl;
+
+Vue.config.errorHandler = function (err, vm, info) {
+  if (vm && vm.onError) {
+    vm.onError(err, info);
+  }
+};
+
 VueHtmlPanelCtrl.templateUrl = 'partials/module.html';
 //# sourceMappingURL=ctrl.js.map

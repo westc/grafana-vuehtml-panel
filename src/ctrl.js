@@ -1,12 +1,24 @@
 import {MetricsPanelCtrl} from 'app/plugins/sdk';
 import _ from 'lodash';
 import * as JS from './external/YourJS.min';
-import { vueToHTML, pseudoCssToJSON } from './helper-functions';
+import { pseudoCssToJSON } from './helper-functions';
+import * as Vue from './external/vue.min';
 
 const DEFAULT_PANEL_SETTINGS = {
   html: '',
   css: '& {\n  overflow: auto;\n}'
 };
+
+const PANEL_PROP_KEYS = [
+  'fullscreen',
+  'datasource',
+  'description',
+  'targets',
+  'timeFrom',
+  'timeShift',
+  'title',
+  'transparent'
+];
 
 export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
   constructor($scope, $injector, $rootScope) {
@@ -23,6 +35,7 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
     
     // Additional events that we can hook into...
     // this.events.on('render', this.onRender.bind(this));
+    // this.events.on('refresh', this.onRefresh.bind(this));
     // this.events.on('data-error', this.onDataError.bind(this));
     // this.events.on('init-panel-actions', this.onInitPanelActions.bind(this));
     // this.events.on('panel-size-changed', this.onPanelSizeChanged.bind(this));
@@ -59,41 +72,46 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
    * resizes or the panel resizes.
    */
   updateView() {
-    let jElem = this.panelElement;
-    let panel = this.panel;
+    let ctrl = this;
+    let jElemPC = ctrl.panelElement;
+    let elemPC = jElemPC[0];
+    let elem = JS.dom({ _: 'div' });
+    let panel = ctrl.panel;
+    let cls = ('_' + Math.random()).replace(/0\./, +new Date);
+
+    jElemPC.html('').append(elem);
+
+    elemPC.className = elemPC.className.replace(/(^|\s+)_\d+(?=\s+|$)/g, ' ').trim() + ' ' + cls;
 
     // Data available to the HTML code.
-    let vueScope = this.getVueScope();
+    let vueScope = ctrl.getVueScope();
 
-    vueToHTML(
-      panel.html,
-      vueScope,
-      html => {
-        let elem = jElem[0];
+    if (ctrl.vue) {
+      ctrl.vue.$destroy();
+    }
 
-        // Adds the HTML that the user entered onto the panel after interpreting
-        // any Vue.js syntax.
-        jElem.html(html);
-
+    ctrl.vue = new Vue({
+      template: `<div>${panel.html}</div>`,
+      el: elem,
+      data: vueScope,
+      mounted() {
         // Remove the old stylesheet from the document if it exists.
-        let stylesheet = this.stylesheet;
+        let stylesheet = ctrl.stylesheet;
         let styleParent = stylesheet && stylesheet.parentNode;
         if (styleParent) {
           styleParent.removeChild(stylesheet);
         }
 
-        // Remove the old class names added by YourJS.css().
-        elem.className = elem.className.replace(/(^|\s+)_\d+(?=\s+|$)/g, ' ').trim();
-
         // Add the nested CSS to the panel.
-        this.stylesheet = JS.css(JSON.parse(pseudoCssToJSON(panel.css)), elem);
+        ctrl.stylesheet = JS.css(JSON.parse(pseudoCssToJSON(panel.css)), '.' + cls);
       },
-      // If an error occurs then it should be logged as such.
-      (err, info) => {
-        console.error('VueHtmlPanelCtrl error:', { err, info });
+      methods: {
+        onError(err, info) {
+          console.error('VueHtmlPanelCtrl error:', { err, info });
+        }
       }
-    );
-}
+    });
+  }
 
   /**
    * Gets the object containing the variables available to the Vue HTML.
@@ -103,7 +121,7 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
   getVueScope() {
     return _.cloneDeep({
       dataset: this.dataList,
-      panel: this.panel
+      panel: _.pick(this.panel, PANEL_PROP_KEYS)
     });
   }
 
@@ -150,5 +168,12 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
     this.panelElement = elem.find('.panel-content');
   }
 }
+
+// Allows for error handling in vueToHTML().
+Vue.config.errorHandler = (err, vm, info) => {
+  if (vm && vm.onError) {
+    vm.onError(err, info);
+  }
+};
 
 VueHtmlPanelCtrl.templateUrl = 'partials/module.html';

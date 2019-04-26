@@ -17,8 +17,8 @@
     "links": [
       {"name": "Project site", "url": "https://github.com/westc/grafana-vuehtml-panel.git"}
     ],
-    "version": "1.0.1",
-    "updated": "2019-04-25"
+    "version": "1.0.2",
+    "updated": "2019-04-26"
   },
 
   "dependencies": {
