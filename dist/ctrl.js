@@ -64,22 +64,75 @@ function (_MetricsPanelCtrl) {
 
     _this.events.on('data-snapshot-load', _this.onDataReceived.bind(_assertThisInitialized(_this)));
 
-    _this.events.on('view-mode-changed', _this.onViewModeChanged.bind(_assertThisInitialized(_this))); // Additional events that we can hook into...
+    _this.events.on('view-mode-changed', _this.onViewModeChanged.bind(_assertThisInitialized(_this)));
+
+    _this.events.on('init-panel-actions', _this.onInitPanelActions.bind(_assertThisInitialized(_this))); // Additional events that we can hook into...
     // this.events.on('render', this.onRender.bind(this));
     // this.events.on('refresh', this.onRefresh.bind(this));
     // this.events.on('data-error', this.onDataError.bind(this));
-    // this.events.on('init-panel-actions', this.onInitPanelActions.bind(this));
     // this.events.on('panel-size-changed', this.onPanelSizeChanged.bind(this));
 
 
     return _this;
   }
   /**
-   * Executed before showing edit mode.
+   * Executed when panel actions should be loaded.
+   * @param {*} actions Actions to be added.
    */
 
 
   _createClass(VueHtmlPanelCtrl, [{
+    key: "onInitPanelActions",
+    value: function onInitPanelActions(actions) {
+      var datasetsSubmenu = this.dataset.reduce(function (carry, data, index) {
+        var raw = data.raw;
+
+        if (raw.type === 'table' && raw.columns.length) {
+          carry.push({
+            text: "Export Dataset \"".concat(raw.refId, "\" As CSV"),
+            icon: 'fa fa-fw fa-download',
+            click: "ctrl.csvifyDataset(".concat(index, ")")
+          });
+        }
+
+        return carry;
+      }, []);
+
+      if (datasetsSubmenu.length === 1) {
+        actions.push(datasetsSubmenu[0]);
+      } else if (datasetsSubmenu.length > 1) {
+        actions.push({
+          text: 'Export Data As CSV\xA0\xA0\xA0',
+          click: '',
+          icon: 'fa fa-fw fa-database',
+          submenu: datasetsSubmenu
+        });
+      }
+
+      var tablesSubmenu = this.panelElement.find('table').toArray().map(function (table, index) {
+        return {
+          text: table.getAttribute('data-title') ? "Export \"".concat(table.getAttribute('data-title'), "\" As CSV") : "Export Table #".concat(index + 1, " As CSV"),
+          icon: 'fa fa-fw fa-download',
+          click: "ctrl.csvifyTable(".concat(index, ")")
+        };
+      });
+
+      if (tablesSubmenu.length === 1) {
+        actions.push(tablesSubmenu[0]);
+      } else if (tablesSubmenu.length > 1) {
+        actions.push({
+          text: 'Export A Table As CSV\xA0\xA0\xA0',
+          click: '',
+          icon: 'fa fa-fw fa-table',
+          submenu: tablesSubmenu
+        });
+      }
+    }
+    /**
+     * Executed before showing edit mode.
+     */
+
+  }, {
     key: "onInitEditMode",
     value: function onInitEditMode() {
       var path = 'public/plugins/westc-vuehtml-panel/partials/';
@@ -93,6 +146,35 @@ function (_MetricsPanelCtrl) {
     key: "onViewModeChanged",
     value: function onViewModeChanged() {
       this.logVueScope();
+    }
+  }, {
+    key: "csvifyDataset",
+    value: function csvifyDataset(datasetIndex) {
+      var data = this.dataset[datasetIndex];
+      var columnNames = data.columnNames,
+          rows = data.rows;
+      JS.dom({
+        _: 'a',
+        href: 'data:text/csv;charset=utf-8,' + encodeURIComponent((0, _helperFunctions.toCSV)(rows.map(function (row) {
+          return columnNames.map(function (cName) {
+            return row[cName];
+          });
+        }), {
+          headers: columnNames
+        })),
+        download: this.panel.title + JS.formatDate(new Date(), " (YYYY-MM-DD 'at' H.mm.ss)") + ".dataset-".concat(data.raw.refId, ".csv")
+      }).click();
+    }
+  }, {
+    key: "csvifyTable",
+    value: function csvifyTable(index) {
+      var table = this.panelElement.find('table').toArray()[index];
+      var title = table.getAttribute('data-title') || this.panel.title + " Table ".concat(index + 1);
+      JS.dom({
+        _: 'a',
+        href: 'data:text/csv;charset=utf-8,' + encodeURIComponent((0, _helperFunctions.toCSV)((0, _helperFunctions.tableToArray)(table))),
+        download: title + JS.formatDate(new Date(), " (YYYY-MM-DD 'at' H.mm.ss)") + ".csv"
+      }).click();
     }
     /**
      * Adds the Vue scope to the console log if in editing mode.
@@ -168,7 +250,7 @@ function (_MetricsPanelCtrl) {
     key: "getVueScope",
     value: function getVueScope() {
       return _lodash.default.cloneDeep({
-        dataset: this.dataList,
+        dataset: this.dataset,
         panel: _lodash.default.pick(this.panel, PANEL_PROP_KEYS)
       });
     }
@@ -183,7 +265,7 @@ function (_MetricsPanelCtrl) {
     key: "onDataReceived",
     value: function onDataReceived(dataList) {
       if (dataList && dataList.length) {
-        this.dataList = dataList.map(function (data) {
+        this.dataset = dataList.map(function (data) {
           var colNames = data.columns.map(function (c) {
             return 'string' === typeof c ? c : c.text;
           });
@@ -200,7 +282,7 @@ function (_MetricsPanelCtrl) {
         });
       } else {
         var EXTRA_COLS = 2;
-        this.dataList = [{
+        this.dataset = [{
           columns: [{
             text: "X"
           }, {

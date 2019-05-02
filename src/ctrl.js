@@ -1,7 +1,7 @@
 import {MetricsPanelCtrl} from 'app/plugins/sdk';
 import _ from 'lodash';
 import * as JS from './external/YourJS.min';
-import { pseudoCssToJSON } from './helper-functions';
+import { pseudoCssToJSON, toCSV, tableToArray } from './helper-functions';
 import * as Vue from './external/vue.min';
 
 const DEFAULT_PANEL_SETTINGS = {
@@ -32,13 +32,59 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
     this.events.on('data-received', this.onDataReceived.bind(this));
     this.events.on('data-snapshot-load', this.onDataReceived.bind(this));
     this.events.on('view-mode-changed', this.onViewModeChanged.bind(this));
+    this.events.on('init-panel-actions', this.onInitPanelActions.bind(this));
     
     // Additional events that we can hook into...
     // this.events.on('render', this.onRender.bind(this));
     // this.events.on('refresh', this.onRefresh.bind(this));
     // this.events.on('data-error', this.onDataError.bind(this));
-    // this.events.on('init-panel-actions', this.onInitPanelActions.bind(this));
     // this.events.on('panel-size-changed', this.onPanelSizeChanged.bind(this));
+  }
+
+  /**
+   * Executed when panel actions should be loaded.
+   * @param {*} actions Actions to be added.
+   */
+  onInitPanelActions(actions) {
+    let datasetsSubmenu = this.dataset.reduce((carry, data, index) => {
+      let raw = data.raw;
+      if (raw.type === 'table' && raw.columns.length) {
+        carry.push({
+          text: `Export Dataset "${raw.refId}" As CSV`,
+          icon: 'fa fa-fw fa-download',
+          click: `ctrl.csvifyDataset(${index})`
+        });
+      }
+      return carry;
+    }, []);
+    if (datasetsSubmenu.length === 1) {
+      actions.push(datasetsSubmenu[0]);
+    }
+    else if (datasetsSubmenu.length > 1) {
+      actions.push({
+        text: 'Export Data As CSV\xA0\xA0\xA0',
+        click: '',
+        icon: 'fa fa-fw fa-database',
+        submenu: datasetsSubmenu
+      });
+    }
+
+    let tablesSubmenu = this.panelElement.find('table').toArray().map((table, index) => ({
+      text: table.getAttribute('data-title') ? `Export "${table.getAttribute('data-title')}" As CSV` : `Export Table #${index + 1} As CSV`,
+      icon: 'fa fa-fw fa-download',
+      click: `ctrl.csvifyTable(${index})`
+    }));
+    if (tablesSubmenu.length === 1) {
+      actions.push(tablesSubmenu[0]);
+    }
+    else if (tablesSubmenu.length > 1) {
+      actions.push({
+        text: 'Export A Table As CSV\xA0\xA0\xA0',
+        click: '',
+        icon: 'fa fa-fw fa-table',
+        submenu: tablesSubmenu
+      });
+    }
   }
 
   /**
@@ -54,6 +100,33 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
    */
   onViewModeChanged() {
     this.logVueScope();
+  }
+
+  csvifyDataset(datasetIndex) {
+    let data = this.dataset[datasetIndex];
+    let { columnNames, rows } = data;
+
+    JS.dom({
+      _: 'a',
+      href: 'data:text/csv;charset=utf-8,' + encodeURIComponent(
+        toCSV(
+          rows.map(row => columnNames.map(cName => row[cName])),
+          { headers: columnNames }
+        )
+      ),
+      download: this.panel.title + JS.formatDate(new Date, " (YYYY-MM-DD 'at' H.mm.ss)") + `.dataset-${data.raw.refId}.csv`
+    }).click();
+  }
+
+  csvifyTable(index) {
+    let table = this.panelElement.find('table').toArray()[index];
+    let title = table.getAttribute('data-title') || (this.panel.title + ` Table ${index + 1}`);
+
+    JS.dom({
+      _: 'a',
+      href: 'data:text/csv;charset=utf-8,' + encodeURIComponent(toCSV(tableToArray(table))),
+      download: title + JS.formatDate(new Date, " (YYYY-MM-DD 'at' H.mm.ss)") + `.csv`
+    }).click();
   }
 
   /**
@@ -120,7 +193,7 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
    */
   getVueScope() {
     return _.cloneDeep({
-      dataset: this.dataList,
+      dataset: this.dataset,
       panel: _.pick(this.panel, PANEL_PROP_KEYS)
     });
   }
@@ -133,7 +206,7 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
    */
   onDataReceived(dataList) {
     if (dataList && dataList.length) {
-      this.dataList = dataList.map(data => {
+      this.dataset = dataList.map(data => {
         let colNames = data.columns.map(c => 'string' === typeof c ? c : c.text);
         return {
           columnNames: colNames,
@@ -149,7 +222,7 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
     }
     else {
       let EXTRA_COLS = 2;
-      this.dataList = [
+      this.dataset = [
         {
           columns: [{ text: "X" }, { text: "X * X" }, { text: "X + X" }].concat(_.range(EXTRA_COLS).map(y => ({ text: `${y} / Math.random()` }))),
           rows: _.range(150).map(x => [x, x * x, x + x].concat(_.range(EXTRA_COLS).map(y => y / Math.random()))),
