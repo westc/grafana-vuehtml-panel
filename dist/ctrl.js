@@ -19,8 +19,6 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
-
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
@@ -37,11 +35,25 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
+function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
 var DEFAULT_PANEL_SETTINGS = {
   html: '',
   css: '& {\n  overflow: auto;\n}'
 };
 var PANEL_PROP_KEYS = ['fullscreen', 'datasource', 'description', 'targets', 'timeFrom', 'timeShift', 'title', 'transparent'];
+
+function normalizeHasher(hasher) {
+  var hasherType = _typeof(hasher);
+
+  return 'function' === hasherType ? hasher : 'string' === hasherType ? function (row) {
+    return JSON.stringify(row[hasher]);
+  } : function (row) {
+    return JSON.stringify(hasher.map(function (item) {
+      return row[item];
+    }));
+  };
+}
 
 var VueHtmlPanelCtrl =
 /*#__PURE__*/
@@ -90,7 +102,7 @@ function (_MetricsPanelCtrl) {
         if (raw.type === 'table' && raw.columns.length) {
           carry.push({
             text: "Export Dataset \"".concat(raw.refId, "\" As CSV"),
-            icon: 'fa fa-fw fa-download',
+            icon: 'fa fa-fw fa-database',
             click: "ctrl.csvifyDataset(".concat(index, ")")
           });
         }
@@ -98,34 +110,26 @@ function (_MetricsPanelCtrl) {
         return carry;
       }, []);
 
-      if (datasetsSubmenu.length === 1) {
-        actions.push(datasetsSubmenu[0]);
-      } else if (datasetsSubmenu.length > 1) {
-        actions.push({
-          text: 'Export Data As CSV\xA0\xA0\xA0',
-          click: '',
-          icon: 'fa fa-fw fa-database',
-          submenu: datasetsSubmenu
-        });
+      if (datasetsSubmenu.length) {
+        actions.push.apply(actions, [{
+          divider: true,
+          role: 'Editor'
+        }].concat(datasetsSubmenu));
       }
 
-      var tablesSubmenu = this.panelElement.find('table').toArray().map(function (table, index) {
+      var tablesSubmenu = this.panelElement.find('table:not([data-disallow-download]):not([data-disallow-csv])').toArray().map(function (table, index) {
         return {
           text: table.getAttribute('data-title') ? "Export \"".concat(table.getAttribute('data-title'), "\" As CSV") : "Export Table #".concat(index + 1, " As CSV"),
-          icon: 'fa fa-fw fa-download',
+          icon: 'fa fa-fw fa-table',
           click: "ctrl.csvifyTable(".concat(index, ")")
         };
       });
 
-      if (tablesSubmenu.length === 1) {
-        actions.push(tablesSubmenu[0]);
-      } else if (tablesSubmenu.length > 1) {
-        actions.push({
-          text: 'Export A Table As CSV\xA0\xA0\xA0',
-          click: '',
-          icon: 'fa fa-fw fa-table',
-          submenu: tablesSubmenu
-        });
+      if (tablesSubmenu.length) {
+        actions.push.apply(actions, [{
+          divider: true,
+          role: 'Editor'
+        }].concat(tablesSubmenu));
       }
     }
     /**
@@ -236,6 +240,28 @@ function (_MetricsPanelCtrl) {
               err: err,
               info: info
             });
+          },
+          keyRows: function keyRows(rows, hasher) {
+            hasher = normalizeHasher(hasher);
+            return rows.reduce(function (carry, row) {
+              var key = hasher(row);
+              carry[key] = _lodash.default.has(carry, key) ? carry[key].concat([row]) : [row];
+              return carry;
+            }, {});
+          },
+          indexRows: function indexRows(rows, hasher) {
+            hasher = normalizeHasher(hasher);
+            var keys = rows.map(function (row) {
+              return hasher(row);
+            });
+
+            var uniqueKeys = _lodash.default.uniq(keys);
+
+            return rows.reduce(function (carry, row, rowIndex) {
+              var realIndex = uniqueKeys.indexOf(keys[rowIndex]);
+              carry[realIndex] = _lodash.default.has(carry, realIndex) ? carry[realIndex].concat([row]) : [row];
+              return carry;
+            }, []);
           }
         }
       });
@@ -251,7 +277,7 @@ function (_MetricsPanelCtrl) {
     value: function getVueScope() {
       return _lodash.default.cloneDeep({
         dataset: this.dataset,
-        panel: _lodash.default.pick(this.panel, PANEL_PROP_KEYS)
+        panel: this.panel.getOptionsToRemember()
       });
     }
     /**

@@ -20,6 +20,15 @@ const PANEL_PROP_KEYS = [
   'transparent'
 ];
 
+function normalizeHasher(hasher) {
+  let hasherType = typeof hasher;
+  return 'function' === hasherType
+    ? hasher
+    : 'string' === hasherType
+      ? row => JSON.stringify(row[hasher])
+      : row => JSON.stringify(hasher.map(item => row[item]));
+}
+
 export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
   constructor($scope, $injector, $rootScope) {
     super($scope, $injector);
@@ -51,39 +60,23 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
       if (raw.type === 'table' && raw.columns.length) {
         carry.push({
           text: `Export Dataset "${raw.refId}" As CSV`,
-          icon: 'fa fa-fw fa-download',
+          icon: 'fa fa-fw fa-database',
           click: `ctrl.csvifyDataset(${index})`
         });
       }
       return carry;
     }, []);
-    if (datasetsSubmenu.length === 1) {
-      actions.push(datasetsSubmenu[0]);
-    }
-    else if (datasetsSubmenu.length > 1) {
-      actions.push({
-        text: 'Export Data As CSV\xA0\xA0\xA0',
-        click: '',
-        icon: 'fa fa-fw fa-database',
-        submenu: datasetsSubmenu
-      });
+    if (datasetsSubmenu.length) {
+      actions.push.apply(actions, [{ divider: true, role: 'Editor' }].concat(datasetsSubmenu));
     }
 
-    let tablesSubmenu = this.panelElement.find('table').toArray().map((table, index) => ({
+    let tablesSubmenu = this.panelElement.find('table:not([data-disallow-download]):not([data-disallow-csv])').toArray().map((table, index) => ({
       text: table.getAttribute('data-title') ? `Export "${table.getAttribute('data-title')}" As CSV` : `Export Table #${index + 1} As CSV`,
-      icon: 'fa fa-fw fa-download',
+      icon: 'fa fa-fw fa-table',
       click: `ctrl.csvifyTable(${index})`
     }));
-    if (tablesSubmenu.length === 1) {
-      actions.push(tablesSubmenu[0]);
-    }
-    else if (tablesSubmenu.length > 1) {
-      actions.push({
-        text: 'Export A Table As CSV\xA0\xA0\xA0',
-        click: '',
-        icon: 'fa fa-fw fa-table',
-        submenu: tablesSubmenu
-      });
+    if (tablesSubmenu.length) {
+      actions.push.apply(actions, [{ divider: true, role: 'Editor' }].concat(tablesSubmenu));
     }
   }
 
@@ -181,6 +174,24 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
       methods: {
         onError(err, info) {
           console.error('VueHtmlPanelCtrl error:', { err, info });
+        },
+        keyRows(rows, hasher) {
+          hasher = normalizeHasher(hasher);
+          return rows.reduce((carry, row) => {
+            let key = hasher(row);
+            carry[key] = _.has(carry, key) ? carry[key].concat([row]) : [row];
+            return carry;
+          }, {});
+        },
+        indexRows(rows, hasher) {
+          hasher = normalizeHasher(hasher);
+          let keys = rows.map(row => hasher(row));
+          let uniqueKeys = _.uniq(keys);
+          return rows.reduce((carry, row, rowIndex) => {
+            let realIndex = uniqueKeys.indexOf(keys[rowIndex]);
+            carry[realIndex] = _.has(carry, realIndex) ? carry[realIndex].concat([row]) : [row];
+            return carry;
+          }, []);
         }
       }
     });
@@ -194,7 +205,7 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
   getVueScope() {
     return _.cloneDeep({
       dataset: this.dataset,
-      panel: _.pick(this.panel, PANEL_PROP_KEYS)
+      panel: this.panel.getOptionsToRemember()
     });
   }
 
