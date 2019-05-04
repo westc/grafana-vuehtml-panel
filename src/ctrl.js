@@ -205,7 +205,8 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
   getVueScope() {
     return _.cloneDeep({
       dataset: this.dataset,
-      panel: this.panel.getOptionsToRemember()
+      panel: this.panel.getOptionsToRemember(),
+      JS
     });
   }
 

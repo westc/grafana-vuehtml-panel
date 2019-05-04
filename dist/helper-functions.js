@@ -61,7 +61,7 @@ function toCSV(rows, opt_options) {
       return /[",\n\r]/.test(cell) ? '"' + cell.replace(/"/g, '""') + '"' : cell;
     }).join(',');
   }).join('\n');
-} // https://gist.github.com/westc/0fa021ae5e66004c60e07c967e0b747f
+} // Based on https://gist.github.com/westc/0fa021ae5e66004c60e07c967e0b747f
 
 
 function tableToArray(tbl, opt_cellValueGetter) {
@@ -88,7 +88,7 @@ function tableToArray(tbl, opt_cellValueGetter) {
 
       for (var i = 0, colSpan = parseInt(td.colSpan, 10) || 1; i < colSpan; i++) {
         for (var j = 0, rowSpan = parseInt(td.rowSpan, 10) || 1; j < rowSpan; j++) {
-          twoD[rowIndex + j][colIndex + offset + i] = text;
+          twoD[rowIndex + j][colIndex + offset + i] = i === 0 && j === 0 ? text : '';
         }
       }
     }

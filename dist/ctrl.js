@@ -277,7 +277,8 @@ function (_MetricsPanelCtrl) {
     value: function getVueScope() {
       return _lodash.default.cloneDeep({
         dataset: this.dataset,
-        panel: this.panel.getOptionsToRemember()
+        panel: this.panel.getOptionsToRemember(),
+        JS: JS
       });
     }
     /**
