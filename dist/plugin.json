@@ -20,8 +20,8 @@
         "url": "https://github.com/westc/grafana-vuehtml-panel.git"
       }
     ],
-    "version": "1.0.3",
-    "updated": "2019-05-02"
+    "version": "1.1.0",
+    "updated": "2019-05-03"
   },
 
   "dependencies": {
