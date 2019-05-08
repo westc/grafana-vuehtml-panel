@@ -37,7 +37,7 @@ function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || func
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
 
-var SEL_DISABLE_DOWNLOAD = '<llow-csv>, <ble-csv>, <llow-download>, <ble-download>'.replace(/<(.+?)>/g, ':not([data-disa$1]');
+var SEL_DISABLE_DOWNLOAD_CSV = '<llow-csv><ble-csv><llow-download><ble-download>'.replace(/<(.+?)>/g, ':not([data-disa$1])');
 var DEFAULT_PANEL_SETTINGS = {
   html: '<h2>Output of available datasets:</h2>\n<div><pre>{{ JSON.stringify(dataset, null, 2); }}</pre>',
   css: '& {\n  overflow: auto;\n}',
@@ -98,7 +98,7 @@ function (_MetricsPanelCtrl) {
     key: "onInitPanelActions",
     value: function onInitPanelActions(actions) {
       var tablesSubmenu = this.panelElement.find('table').toArray().reduce(function (carry, table, index) {
-        if (jQuery(table).is(SEL_DISABLE_DOWNLOAD)) {
+        if (jQuery(table).is(SEL_DISABLE_DOWNLOAD_CSV)) {
           carry.push({
             text: table.getAttribute('data-title') ? "Export \"".concat(table.getAttribute('data-title'), "\" As CSV") : "Export Table #".concat(index + 1, " As CSV"),
             icon: 'fa fa-fw fa-table',

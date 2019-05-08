@@ -4,7 +4,7 @@ import * as JS from './external/YourJS.min';
 import { pseudoCssToJSON, toCSV, tableToArray } from './helper-functions';
 import * as Vue from './external/vue.min';
 
-const SEL_DISABLE_DOWNLOAD = '<llow-csv>, <ble-csv>, <llow-download>, <ble-download>'.replace(/<(.+?)>/g, ':not([data-disa$1]');
+const SEL_DISABLE_DOWNLOAD_CSV = '<llow-csv><ble-csv><llow-download><ble-download>'.replace(/<(.+?)>/g, ':not([data-disa$1])');
 
 const DEFAULT_PANEL_SETTINGS = {
   html: '<h2>Output of available datasets:</h2>\n<div><pre>{{ JSON.stringify(dataset, null, 2); }}</pre>',
@@ -49,7 +49,7 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
   onInitPanelActions(actions) {
     let tablesSubmenu = this.panelElement.find('table').toArray().reduce(
       (carry, table, index) => {
-        if (jQuery(table).is(SEL_DISABLE_DOWNLOAD)) {
+        if (jQuery(table).is(SEL_DISABLE_DOWNLOAD_CSV)) {
           carry.push({
             text: table.getAttribute('data-title') ? `Export "${table.getAttribute('data-title')}" As CSV` : `Export Table #${index + 1} As CSV`,
             icon: 'fa fa-fw fa-table',
