@@ -1,0 +1,31 @@
+{
+  "type": "panel",
+  "name": "Vue HTML",
+  "id": "westc-vuehtml-panel",
+
+  "info": {
+    "description": "Create a highly customizable panel using Vue.js.",
+    "author": {
+      "name": "westc",
+      "url": "https://github.com/westc"
+    },
+    "keywords": ["panel"],
+    "logos": {
+      "small": "img/logo.png",
+      "large": "img/logo.png"
+    },
+    "links": [
+      {
+        "name": "Project site",
+        "url": "https://github.com/westc/grafana-vuehtml-panel.git"
+      }
+    ],
+    "version": "2.0.0",
+    "updated": "2019-05-08"
+  },
+
+  "dependencies": {
+    "grafanaVersion": "4.6",
+    "plugins": [ ]
+  }
+}
