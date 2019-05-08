@@ -6,7 +6,7 @@
   "info": {
     "description": "Create a highly customizable panel using Vue.js.",
     "author": {
-      "name": "westc",
+      "name": "Chris West",
       "url": "https://github.com/westc"
     },
     "keywords": ["panel"],
@@ -25,7 +25,7 @@
   },
 
   "dependencies": {
-    "grafanaVersion": "4.6",
+    "grafanaVersion": "6.x.x",
     "plugins": [ ]
   }
 }
