@@ -4,21 +4,13 @@ import * as JS from './external/YourJS.min';
 import { pseudoCssToJSON, toCSV, tableToArray } from './helper-functions';
 import * as Vue from './external/vue.min';
 
-const DEFAULT_PANEL_SETTINGS = {
-  html: '',
-  css: '& {\n  overflow: auto;\n}'
-};
+const SEL_DISABLE_DOWNLOAD = '<llow-csv>, <ble-csv>, <llow-download>, <ble-download>'.replace(/<(.+?)>/g, ':not([data-disa$1]');
 
-const PANEL_PROP_KEYS = [
-  'fullscreen',
-  'datasource',
-  'description',
-  'targets',
-  'timeFrom',
-  'timeShift',
-  'title',
-  'transparent'
-];
+const DEFAULT_PANEL_SETTINGS = {
+  html: '<h2>Output of available datasets:</h2>\n<div><pre>{{ JSON.stringify(dataset, null, 2); }}</pre>',
+  css: '& {\n  overflow: auto;\n}',
+  canDownloadDatasets: true
+};
 
 function normalizeHasher(hasher) {
   let hasherType = typeof hasher;
@@ -55,28 +47,38 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
    * @param {*} actions Actions to be added.
    */
   onInitPanelActions(actions) {
-    let datasetsSubmenu = this.dataset.reduce((carry, data, index) => {
-      let raw = data.raw;
-      if (raw.type === 'table' && raw.columns.length) {
-        carry.push({
-          text: `Export Dataset "${raw.refId}" As CSV`,
-          icon: 'fa fa-fw fa-database',
-          click: `ctrl.csvifyDataset(${index})`
-        });
-      }
-      return carry;
-    }, []);
-    if (datasetsSubmenu.length) {
-      actions.push.apply(actions, [{ divider: true, role: 'Editor' }].concat(datasetsSubmenu));
-    }
-
-    let tablesSubmenu = this.panelElement.find('table:not([data-disallow-download]):not([data-disallow-csv])').toArray().map((table, index) => ({
-      text: table.getAttribute('data-title') ? `Export "${table.getAttribute('data-title')}" As CSV` : `Export Table #${index + 1} As CSV`,
-      icon: 'fa fa-fw fa-table',
-      click: `ctrl.csvifyTable(${index})`
-    }));
+    let tablesSubmenu = this.panelElement.find('table').toArray().reduce(
+      (carry, table, index) => {
+        if (jQuery(table).is(SEL_DISABLE_DOWNLOAD)) {
+          carry.push({
+            text: table.getAttribute('data-title') ? `Export "${table.getAttribute('data-title')}" As CSV` : `Export Table #${index + 1} As CSV`,
+            icon: 'fa fa-fw fa-table',
+            click: `ctrl.csvifyTable(${index})`
+          });
+        }
+        return carry;
+      },
+      []
+    );
     if (tablesSubmenu.length) {
       actions.push.apply(actions, [{ divider: true, role: 'Editor' }].concat(tablesSubmenu));
+    }
+
+    if (this.panel.canDownloadDatasets) {
+      let datasetsSubmenu = this.dataset.reduce((carry, data, index) => {
+        let raw = data.raw;
+        if (raw.type === 'table' && raw.columns.length) {
+          carry.push({
+            text: `Export Dataset "${raw.refId}" As CSV`,
+            icon: 'fa fa-fw fa-database',
+            click: `ctrl.csvifyDataset(${index})`
+          });
+        }
+        return carry;
+      }, []);
+      if (datasetsSubmenu.length) {
+        actions.push.apply(actions, [{ divider: true, role: 'Editor' }].concat(datasetsSubmenu));
+      }
     }
   }
 

@@ -76,7 +76,9 @@ function toCSV(rows, opt_options) {
 
 // Based on https://gist.github.com/westc/0fa021ae5e66004c60e07c967e0b747f
 function tableToArray(tbl, opt_cellValueGetter) {
-  opt_cellValueGetter = opt_cellValueGetter || function (td) { return td.textContent || td.innerText; };
+  opt_cellValueGetter = opt_cellValueGetter || function (td) {
+    return (td.textContent || td.innerText || '').trim();
+  };
   var twoD = [];
   for (var rowCount = tbl.rows.length, rowIndex = 0; rowIndex < rowCount; rowIndex++) {
     twoD.push([]);

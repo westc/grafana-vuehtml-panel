@@ -66,7 +66,7 @@ function toCSV(rows, opt_options) {
 
 function tableToArray(tbl, opt_cellValueGetter) {
   opt_cellValueGetter = opt_cellValueGetter || function (td) {
-    return td.textContent || td.innerText;
+    return (td.textContent || td.innerText || '').trim();
   };
 
   var twoD = [];
