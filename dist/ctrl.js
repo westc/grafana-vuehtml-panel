@@ -39,9 +39,10 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
 
 var SEL_DISABLE_DOWNLOAD_CSV = '<llow-csv><ble-csv><llow-download><ble-download>'.replace(/<(.+?)>/g, ':not([data-disa$1])');
 var DEFAULT_PANEL_SETTINGS = {
-  html: '<h2>Output of available datasets:</h2>\n<div><pre>{{ JSON.stringify(dataset, null, 2); }}</pre>',
+  html: '<h2>Output of available datasets:</h2>\n<div><pre>{{ JSON.stringify(dataset, null, 2) }}</pre></div>',
   css: '& {\n  overflow: auto;\n}',
-  canDownloadDatasets: true
+  canDownloadDatasets: true,
+  emIsContentHeight: false
 };
 
 function normalizeHasher(hasher) {
@@ -80,10 +81,12 @@ function (_MetricsPanelCtrl) {
     _this.events.on('view-mode-changed', _this.onViewModeChanged.bind(_assertThisInitialized(_this)));
 
     _this.events.on('init-panel-actions', _this.onInitPanelActions.bind(_assertThisInitialized(_this))); // Additional events that we can hook into...
-    // this.events.on('render', this.onRender.bind(this));
-    // this.events.on('refresh', this.onRefresh.bind(this));
+    // this.events.on('component-did-mount', this.onComponentDidMount.bind(this));
     // this.events.on('data-error', this.onDataError.bind(this));
     // this.events.on('panel-size-changed', this.onPanelSizeChanged.bind(this));
+    // this.events.on('panel-teardown', this.onPanelTeardown.bind(this));
+    // this.events.on('refresh', this.onRefresh.bind(this));
+    // this.events.on('render', this.onRender.bind(this));
 
 
     return _this;
@@ -199,6 +202,14 @@ function (_MetricsPanelCtrl) {
         console.debug('Data values available:', this.getVueScope());
       }
     }
+  }, {
+    key: "render",
+    value: function render() {
+      // If an `em` unit is supposed to be the height of the panel then
+      // recalculate it.
+      var jElemPC = this.panelElement;
+      jElemPC.css('font-size', this.panel.emIsContentHeight ? jElemPC.height() + 'px' : '');
+    }
     /**
      * Should only be called when the panel should re-rendered fresh.  Not defined
      * as render because there is no need to re-render every time the window
@@ -216,6 +227,8 @@ function (_MetricsPanelCtrl) {
       });
       var panel = ctrl.panel;
       var cls = ('_' + Math.random()).replace(/0\./, +new Date());
+      this.render(); // Recalculates `em` size if it is supposed to.
+
       jElemPC.html('').append(elem);
       elemPC.className = elemPC.className.replace(/(^|\s+)_\d+(?=\s+|$)/g, ' ').trim() + ' ' + cls; // Data available to the HTML code.
 
@@ -315,27 +328,7 @@ function (_MetricsPanelCtrl) {
           };
         });
       } else {
-        var EXTRA_COLS = 2;
-        this.dataset = [{
-          columns: [{
-            text: "X"
-          }, {
-            text: "X * X"
-          }, {
-            text: "X + X"
-          }].concat(_lodash.default.range(EXTRA_COLS).map(function (y) {
-            return {
-              text: "".concat(y, " / Math.random()")
-            };
-          })),
-          rows: _lodash.default.range(150).map(function (x) {
-            return [x, x * x, x + x].concat(_lodash.default.range(EXTRA_COLS).map(function (y) {
-              return y / Math.random();
-            }));
-          }),
-          isReal: false,
-          type: 'table'
-        }];
+        this.dataset = [];
       }
 
       this.updateView();

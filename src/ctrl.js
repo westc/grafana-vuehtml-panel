@@ -7,9 +7,10 @@ import * as Vue from './external/vue.min';
 const SEL_DISABLE_DOWNLOAD_CSV = '<llow-csv><ble-csv><llow-download><ble-download>'.replace(/<(.+?)>/g, ':not([data-disa$1])');
 
 const DEFAULT_PANEL_SETTINGS = {
-  html: '<h2>Output of available datasets:</h2>\n<div><pre>{{ JSON.stringify(dataset, null, 2); }}</pre>',
+  html: '<h2>Output of available datasets:</h2>\n<div><pre>{{ JSON.stringify(dataset, null, 2) }}</pre></div>',
   css: '& {\n  overflow: auto;\n}',
-  canDownloadDatasets: true
+  canDownloadDatasets: true,
+  emIsContentHeight: false
 };
 
 function normalizeHasher(hasher) {
@@ -36,10 +37,12 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
     this.events.on('init-panel-actions', this.onInitPanelActions.bind(this));
     
     // Additional events that we can hook into...
-    // this.events.on('render', this.onRender.bind(this));
-    // this.events.on('refresh', this.onRefresh.bind(this));
+    // this.events.on('component-did-mount', this.onComponentDidMount.bind(this));
     // this.events.on('data-error', this.onDataError.bind(this));
     // this.events.on('panel-size-changed', this.onPanelSizeChanged.bind(this));
+    // this.events.on('panel-teardown', this.onPanelTeardown.bind(this));
+    // this.events.on('refresh', this.onRefresh.bind(this));
+    // this.events.on('render', this.onRender.bind(this));
   }
 
   /**
@@ -134,6 +137,13 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
     }
   }
 
+  render() {
+    // If an `em` unit is supposed to be the height of the panel then
+    // recalculate it.
+    let jElemPC = this.panelElement;
+    jElemPC.css('font-size', this.panel.emIsContentHeight ? jElemPC.height() + 'px' : '');
+  }
+
   /**
    * Should only be called when the panel should re-rendered fresh.  Not defined
    * as render because there is no need to re-render every time the window
@@ -146,6 +156,8 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
     let elem = JS.dom({ _: 'div' });
     let panel = ctrl.panel;
     let cls = ('_' + Math.random()).replace(/0\./, +new Date);
+
+    this.render(); // Recalculates `em` size if it is supposed to.
 
     jElemPC.html('').append(elem);
 
@@ -235,15 +247,7 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
       });
     }
     else {
-      let EXTRA_COLS = 2;
-      this.dataset = [
-        {
-          columns: [{ text: "X" }, { text: "X * X" }, { text: "X + X" }].concat(_.range(EXTRA_COLS).map(y => ({ text: `${y} / Math.random()` }))),
-          rows: _.range(150).map(x => [x, x * x, x + x].concat(_.range(EXTRA_COLS).map(y => y / Math.random()))),
-          isReal: false,
-          type: 'table'
-        }
-      ];
+      this.dataset = [];
     }
 
     this.updateView();
