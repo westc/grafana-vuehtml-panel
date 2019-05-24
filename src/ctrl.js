@@ -3,6 +3,7 @@ import _ from 'lodash';
 import * as JS from './external/YourJS.min';
 import { pseudoCssToJSON, toCSV, tableToArray } from './helper-functions';
 import * as Vue from './external/vue.min';
+import config from 'app/core/config';
 
 const SEL_DISABLE_DOWNLOAD_CSV = '<llow-csv><ble-csv><llow-download><ble-download>'.replace(/<(.+?)>/g, ':not([data-disa$1])');
 
@@ -217,10 +218,72 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
    *   The Vue scope that is made available to the Vue HTML.
    */
   getVueScope() {
+    let ctrl = this;
     return _.cloneDeep({
-      dataset: this.dataset,
-      panel: this.panel.getOptionsToRemember(),
-      JS
+      dataset: ctrl.dataset,
+      panel: ctrl.panel.getOptionsToRemember(),
+      JS,
+      themeType: config.theme.type,
+      url: {
+        encode(value) {
+          return encodeURIComponent(value + '').replace(/%20/g, '+');
+        },
+        decode(value) {
+          return decodeURIComponent((value + '').replace(/\+/g, '%20'));
+        },
+        toParams(objValues, opt_prefixVar) {
+          return Object.entries(objValues).reduce((arrParams, [key, value]) => {
+            return arrParams.concat(
+              JS.toArray(value).map(
+                value => this.encode((opt_prefixVar ? 'var-' : '') + key) + '=' + this.encode(value)
+              )
+            );
+          }, []).join('&');
+        },
+        getTimeValues(opt_name) {
+          let result = {};
+          let { time } = ctrl.timeSrv;
+          if (opt_name != 'to') {
+            result.from = time.from;
+          }
+          if (opt_name != 'from') {
+            result.to = time.to;
+          }
+          return result;
+        },
+        getTimeParams(opt_name) {
+          return this.toParams(this.getTimeValues(opt_name));
+        },
+        getVarValues(opt_filter, opt_negate) {
+          if (opt_filter && 'function' !== typeof opt_filter) {
+            let arrFilter = JS.toArray(opt_filter);
+            opt_filter = key => arrFilter.some(
+              filter => filter instanceof RegExp ? filter.test(key) : (filter == key)
+            );
+          }
+          
+          return ctrl.templateSrv.variables.reduce(
+            (values, variable) => {
+              // At times current.value is a string and at times it is an array.
+              let key = variable.name;
+              let varValues = JS.toArray(variable.current.value);
+              let isAll = variable.includeAll && varValues.length === 1 && varValues[0] === '$__all';
+              varValues = isAll ? [variable.current.text] : varValues;
+              if (opt_filter) {
+                varValues = varValues.filter(value => !!opt_filter(key, value) === !opt_negate);
+              }
+              if (varValues.length) {
+                values[key] = varValues;
+              }
+              return values;
+            },
+            {}
+          );
+        },
+        getVarParams(opt_filter, opt_negate) {
+          return this.toParams(this.getVarValues(opt_filter, opt_negate), true);
+        }
+      }
     });
   }
 

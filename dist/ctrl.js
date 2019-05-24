@@ -15,9 +15,19 @@ var _helperFunctions = require("./helper-functions");
 
 var Vue = _interopRequireWildcard(require("./external/vue.min"));
 
+var _config = _interopRequireDefault(require("app/core/config"));
+
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
+
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
+
+function _iterableToArrayLimit(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+
+function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -295,10 +305,84 @@ function (_MetricsPanelCtrl) {
   }, {
     key: "getVueScope",
     value: function getVueScope() {
+      var ctrl = this;
       return _lodash.default.cloneDeep({
-        dataset: this.dataset,
-        panel: this.panel.getOptionsToRemember(),
-        JS: JS
+        dataset: ctrl.dataset,
+        panel: ctrl.panel.getOptionsToRemember(),
+        JS: JS,
+        themeType: _config.default.theme.type,
+        url: {
+          encode: function encode(value) {
+            return encodeURIComponent(value + '').replace(/%20/g, '+');
+          },
+          decode: function decode(value) {
+            return decodeURIComponent((value + '').replace(/\+/g, '%20'));
+          },
+          toParams: function toParams(objValues, opt_prefixVar) {
+            var _this2 = this;
+
+            return Object.entries(objValues).reduce(function (arrParams, _ref) {
+              var _ref2 = _slicedToArray(_ref, 2),
+                  key = _ref2[0],
+                  value = _ref2[1];
+
+              return arrParams.concat(JS.toArray(value).map(function (value) {
+                return _this2.encode((opt_prefixVar ? 'var-' : '') + key) + '=' + _this2.encode(value);
+              }));
+            }, []).join('&');
+          },
+          getTimeValues: function getTimeValues(opt_name) {
+            var result = {};
+            var time = ctrl.timeSrv.time;
+
+            if (opt_name != 'to') {
+              result.from = time.from;
+            }
+
+            if (opt_name != 'from') {
+              result.to = time.to;
+            }
+
+            return result;
+          },
+          getTimeParams: function getTimeParams(opt_name) {
+            return this.toParams(this.getTimeValues(opt_name));
+          },
+          getVarValues: function getVarValues(opt_filter, opt_negate) {
+            if (opt_filter && 'function' !== typeof opt_filter) {
+              var arrFilter = JS.toArray(opt_filter);
+
+              opt_filter = function opt_filter(key) {
+                return arrFilter.some(function (filter) {
+                  return filter instanceof RegExp ? filter.test(key) : filter == key;
+                });
+              };
+            }
+
+            return ctrl.templateSrv.variables.reduce(function (values, variable) {
+              // At times current.value is a string and at times it is an array.
+              var key = variable.name;
+              var varValues = JS.toArray(variable.current.value);
+              var isAll = variable.includeAll && varValues.length === 1 && varValues[0] === '$__all';
+              varValues = isAll ? [variable.current.text] : varValues;
+
+              if (opt_filter) {
+                varValues = varValues.filter(function (value) {
+                  return !!opt_filter(key, value) === !opt_negate;
+                });
+              }
+
+              if (varValues.length) {
+                values[key] = varValues;
+              }
+
+              return values;
+            }, {});
+          },
+          getVarParams: function getVarParams(opt_filter, opt_negate) {
+            return this.toParams(this.getVarValues(opt_filter, opt_negate), true);
+          }
+        }
       });
     }
     /**
