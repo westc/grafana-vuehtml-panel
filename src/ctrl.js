@@ -11,8 +11,15 @@ const DEFAULT_PANEL_SETTINGS = {
   html: '<h2>Output of available datasets:</h2>\n<div><pre>{{ JSON.stringify(dataset, null, 2) }}</pre></div>',
   css: '& {\n  overflow: auto;\n}',
   canDownloadDatasets: true,
-  emIsContentHeight: false
+  emIsContentHeight: false,
+  refreshRate: null
 };
+
+const REFRESH_RATE_OPTIONS = [
+  { value: null, text: 'Never' },
+  { value: 1, text: 'Every second' },
+  { value: 60, text: 'Every minute' }
+];
 
 function normalizeHasher(hasher) {
   let hasherType = typeof hasher;
@@ -210,6 +217,16 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
         }
       }
     });
+
+    let refreshRate = ctrl.panel.refreshRate;
+    if (refreshRate > 0 && ~~refreshRate === refreshRate) {
+      setTimeout(function() {
+        // Only update if the refresh rate remains unchanged
+        if (refreshRate === ctrl.panel.refreshRate) {
+          ctrl.updateView();
+        }
+      }, refreshRate * 1e3);
+    }
   }
 
   /**
@@ -329,5 +346,7 @@ Vue.config.errorHandler = (err, vm, info) => {
     vm.onError(err, info);
   }
 };
+
+VueHtmlPanelCtrl.prototype.REFRESH_RATE_OPTIONS = REFRESH_RATE_OPTIONS;
 
 VueHtmlPanelCtrl.templateUrl = 'partials/module.html';
