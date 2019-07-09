@@ -1,8 +1,8 @@
 {
   "name": "westc-vuehtml-panel",
   "private": true,
-  "version": "1.4.0",
-  "description": "",
+  "version": "1.5.0",
+  "description": "Create a highly customizable panel using Vue.js.",
   "repository": {
     "type": "git",
     "url": "https://github.com/westc/grafana-vuehtml-panel.git"

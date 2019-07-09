@@ -11,7 +11,7 @@ const DEFAULT_PANEL_SETTINGS = {
   html: '<h2>Output of available datasets:</h2>\n<div><pre>{{ JSON.stringify(dataset, null, 2) }}</pre></div>',
   css: '& {\n  overflow: auto;\n}',
   canDownloadDatasets: true,
-  emIsContentHeight: false,
+  emType: null,
   refreshRate: null
 };
 
@@ -19,6 +19,15 @@ const REFRESH_RATE_OPTIONS = [
   { value: null, text: 'Never' },
   { value: 1, text: 'Every second' },
   { value: 60, text: 'Every minute' }
+];
+
+const EM_TYPES = [
+  { value: null, text: 'Default' },
+  { value: 'CONTENT-HEIGHT', text: 'Content Height' },
+  { value: 'CONTENT-WIDTH', text: 'Content Width' },
+  { value: 'CONTENT-MIN-DIM', text: 'Minimum Content Dimension' },
+  { value: 'CONTENT-MAX-DIM', text: 'Maximum Content Dimension' },
+  { value: 'CONTENT-AVG-DIM', text: 'Average of Content Dimensions' }
 ];
 
 function normalizeHasher(hasher) {
@@ -37,6 +46,13 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
     this.$rootScope = $rootScope;
 
     _.defaultsDeep(this.panel, DEFAULT_PANEL_SETTINGS);
+
+    // If panel.emIsContentHeight was used, convert it to panel.emType.
+    let { emIsContentHeight } = this.panel;
+    if (emIsContentHeight != null) {
+      this.panel.emType = emIsContentHeight ? 'CONTENT-HEIGHT' : null;
+      delete this.panel.emIsContentHeight;
+    }
 
     this.events.on('init-edit-mode', this.onInitEditMode.bind(this));
     this.events.on('data-received', this.onDataReceived.bind(this));
@@ -146,10 +162,23 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
   }
 
   render() {
-    // If an `em` unit is supposed to be the height of the panel then
-    // recalculate it.
+    // If an `em` unit is supposed to be based on the size of the content area
+    // make sure to recalculate it.
     let jElemPC = this.panelElement;
-    jElemPC.css('font-size', this.panel.emIsContentHeight ? jElemPC.height() + 'px' : '');
+    let { emType } = this.panel;
+    let size =
+      'CONTENT-HEIGHT' === emType
+        ? jElemPC.height()
+        : 'CONTENT-WIDTH' === emType
+          ? jElemPC.width()
+          : 'CONTENT-MIN-DIM' === emType
+            ? Math.min(jElemPC.height(), jElemPC.width())
+            : 'CONTENT-MAX-DIM' === emType
+              ? Math.max(jElemPC.height(), jElemPC.width())
+              : 'CONTENT-AVG-DIM' === emType
+                ? (jElemPC.height() + jElemPC.width()) / 2
+                : null;
+    jElemPC.css('font-size', size != null ? size + 'px' : '');
   }
 
   /**
@@ -348,5 +377,6 @@ Vue.config.errorHandler = (err, vm, info) => {
 };
 
 VueHtmlPanelCtrl.prototype.REFRESH_RATE_OPTIONS = REFRESH_RATE_OPTIONS;
+VueHtmlPanelCtrl.prototype.EM_TYPES = EM_TYPES;
 
 VueHtmlPanelCtrl.templateUrl = 'partials/module.html';

@@ -52,7 +52,7 @@ var DEFAULT_PANEL_SETTINGS = {
   html: '<h2>Output of available datasets:</h2>\n<div><pre>{{ JSON.stringify(dataset, null, 2) }}</pre></div>',
   css: '& {\n  overflow: auto;\n}',
   canDownloadDatasets: true,
-  emIsContentHeight: false,
+  emType: null,
   refreshRate: null
 };
 var REFRESH_RATE_OPTIONS = [{
@@ -64,6 +64,25 @@ var REFRESH_RATE_OPTIONS = [{
 }, {
   value: 60,
   text: 'Every minute'
+}];
+var EM_TYPES = [{
+  value: null,
+  text: 'Default'
+}, {
+  value: 'CONTENT-HEIGHT',
+  text: 'Content Height'
+}, {
+  value: 'CONTENT-WIDTH',
+  text: 'Content Width'
+}, {
+  value: 'CONTENT-MIN-DIM',
+  text: 'Minimum Content Dimension'
+}, {
+  value: 'CONTENT-MAX-DIM',
+  text: 'Maximum Content Dimension'
+}, {
+  value: 'CONTENT-AVG-DIM',
+  text: 'Average of Content Dimensions'
 }];
 
 function normalizeHasher(hasher) {
@@ -91,7 +110,15 @@ function (_MetricsPanelCtrl) {
     _this = _possibleConstructorReturn(this, _getPrototypeOf(VueHtmlPanelCtrl).call(this, $scope, $injector));
     _this.$rootScope = $rootScope;
 
-    _lodash.default.defaultsDeep(_this.panel, DEFAULT_PANEL_SETTINGS);
+    _lodash.default.defaultsDeep(_this.panel, DEFAULT_PANEL_SETTINGS); // If panel.emIsContentHeight was used, convert it to panel.emType.
+
+
+    var emIsContentHeight = _this.panel.emIsContentHeight;
+
+    if (emIsContentHeight != null) {
+      _this.panel.emType = emIsContentHeight ? 'CONTENT-HEIGHT' : null;
+      delete _this.panel.emIsContentHeight;
+    }
 
     _this.events.on('init-edit-mode', _this.onInitEditMode.bind(_assertThisInitialized(_this)));
 
@@ -226,10 +253,12 @@ function (_MetricsPanelCtrl) {
   }, {
     key: "render",
     value: function render() {
-      // If an `em` unit is supposed to be the height of the panel then
-      // recalculate it.
+      // If an `em` unit is supposed to be based on the size of the content area
+      // make sure to recalculate it.
       var jElemPC = this.panelElement;
-      jElemPC.css('font-size', this.panel.emIsContentHeight ? jElemPC.height() + 'px' : '');
+      var emType = this.panel.emType;
+      var size = 'CONTENT-HEIGHT' === emType ? jElemPC.height() : 'CONTENT-WIDTH' === emType ? jElemPC.width() : 'CONTENT-MIN-DIM' === emType ? Math.min(jElemPC.height(), jElemPC.width()) : 'CONTENT-MAX-DIM' === emType ? Math.max(jElemPC.height(), jElemPC.width()) : 'CONTENT-AVG-DIM' === emType ? (jElemPC.height() + jElemPC.width()) / 2 : null;
+      jElemPC.css('font-size', size != null ? size + 'px' : '');
     }
     /**
      * Should only be called when the panel should re-rendered fresh.  Not defined
@@ -460,5 +489,6 @@ Vue.config.errorHandler = function (err, vm, info) {
 };
 
 VueHtmlPanelCtrl.prototype.REFRESH_RATE_OPTIONS = REFRESH_RATE_OPTIONS;
+VueHtmlPanelCtrl.prototype.EM_TYPES = EM_TYPES;
 VueHtmlPanelCtrl.templateUrl = 'partials/module.html';
 //# sourceMappingURL=ctrl.js.map

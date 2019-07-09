@@ -1,5 +1,8 @@
 # Changelog
 
+- **v1.5.0**
+  - Added an option to define if `1em` will be the content height, the content width, the maximum of the content dimensions, the minimum of the content dimensions or the average of the content dimensions.
+
 - **v1.4.0**
   - Added `url` functions:
     - `url.encode()` - Encodes a value so that it can appear correctly within the parameters of a URL.
