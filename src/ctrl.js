@@ -1,9 +1,11 @@
 import {MetricsPanelCtrl} from 'app/plugins/sdk';
+import angular from 'angular';
 import _ from 'lodash';
 import * as JS from './external/YourJS.min';
 import { pseudoCssToJSON, toCSV, tableToArray } from './helper-functions';
 import * as Vue from './external/vue.min';
 import config from 'app/core/config';
+import { coreModule, appEvents } from 'app/core/core';
 
 const SEL_DISABLE_DOWNLOAD_CSV = '<llow-csv><ble-csv><llow-download><ble-download>'.replace(/<(.+?)>/g, ':not([data-disa$1])');
 
@@ -375,6 +377,28 @@ Vue.config.errorHandler = (err, vm, info) => {
     vm.onError(err, info);
   }
 };
+
+angular.module('grafana.directives').controller('YourComponentCtrl', ['$scope', function ($scope) {
+  $scope.customer = {
+    name: 'Naomi',
+    address: '1600 Amphitheatre'
+  };
+  $scope.html = '<b>Hello</b>';
+}]);
+
+angular.module('grafana.directives').directive("cool", function () {
+  return {
+    templateUrl: 'public/plugins/westc-vuehtml-panel/partials/test.html',
+    restrict: 'E',
+    controller: 'YourComponentCtrl',
+    bindToController: true,
+    transclude: true,
+    controllerAs: 'ctrl',
+    scope: {
+      title: '@'
+    }
+  };
+});
 
 VueHtmlPanelCtrl.prototype.REFRESH_RATE_OPTIONS = REFRESH_RATE_OPTIONS;
 VueHtmlPanelCtrl.prototype.EM_TYPES = EM_TYPES;

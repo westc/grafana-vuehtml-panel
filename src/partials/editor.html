@@ -1,4 +1,6 @@
 <div>
+  <cool title="Big Day!"><b>Jump</b></cool>
+
   <h5>
     Vue.js HTML
     <tip>Open the JavaScript console to see what variables are available.</tip>
@@ -12,11 +14,13 @@
 
   <div class="gf-form">
     <label class="gf-form-label width-auto">Refresh Rate</label>
-    <select class="gf-form-input"
-      ng-model="ctrl.panel.refreshRate"
-      ng-options="opt.value as opt.text for opt in ctrl.REFRESH_RATE_OPTIONS"
-      ng-change="ctrl.updateView()">
-    </select>
+    <div class="gf-form-select-wrapper max-width">
+      <select class="gf-form-input"
+        ng-model="ctrl.panel.refreshRate"
+        ng-options="opt.value as opt.text for opt in ctrl.REFRESH_RATE_OPTIONS"
+        ng-change="ctrl.updateView()">
+      </select>
+    </div>
   </div>
 
   <h5 style="margin-top: 1em;">Nestable CSS</h5>
@@ -28,11 +32,13 @@
 
   <div class="gf-form">
     <label class="gf-form-label width-auto">Default Font Size (<code>1em</code>)</label>
-    <select class="gf-form-input"
-      ng-model="ctrl.panel.emType"
-      ng-options="opt.value as opt.text for opt in ctrl.EM_TYPES"
-      ng-change="ctrl.updateView()">
-    </select>
+    <div class="gf-form-select-wrapper max-width">
+      <select class="gf-form-input"
+        ng-model="ctrl.panel.emType"
+        ng-options="opt.value as opt.text for opt in ctrl.EM_TYPES"
+        ng-change="ctrl.updateView()">
+      </select>
+    </div>
   </div>
 
   <h5 style="margin-top: 1em;">Download Options</h5>
