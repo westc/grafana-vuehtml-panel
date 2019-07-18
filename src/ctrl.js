@@ -55,6 +55,7 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
     }
 
     this.events.on('init-edit-mode', this.onInitEditMode.bind(this));
+    this.events.on('data-error', this.onDataError.bind(this));
     this.events.on('data-received', this.onDataReceived.bind(this));
     this.events.on('data-snapshot-load', this.onDataReceived.bind(this));
     this.events.on('view-mode-changed', this.onViewModeChanged.bind(this));
@@ -62,11 +63,29 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
     
     // Additional events that we can hook into...
     // this.events.on('component-did-mount', this.onComponentDidMount.bind(this));
-    // this.events.on('data-error', this.onDataError.bind(this));
     // this.events.on('panel-size-changed', this.onPanelSizeChanged.bind(this));
     // this.events.on('panel-teardown', this.onPanelTeardown.bind(this));
     // this.events.on('refresh', this.onRefresh.bind(this));
     // this.events.on('render', this.onRender.bind(this));
+  }
+
+  renderError(title, message, isMonospace) {
+    this.panelElement.html('').append(JS.dom({
+      _: 'div', style: { display: 'flex', alignItems: 'center', textAlign: 'center', height: '100%' }, $: [
+        {
+          _: 'div',
+          cls: 'alert alert-error',
+          style: { margin: '0px auto' },
+          $: {
+            _: 'div',
+            $: [
+              { _: 'h2', style: { color: '#FFF' }, text: title },
+              { _: isMonospace ? 'pre' : 'div', text: message }
+            ]
+          }
+        }
+      ]
+    }));
   }
 
   /**
@@ -157,7 +176,7 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
   logVueScope() {
     // If in editing mode show the html scope.
     if (this.panel.isEditing) {
-      console.debug('Data values available:', this.getVueScope());
+      console.log('Data values available:', this.getVueScope());
     }
   }
 
@@ -224,6 +243,7 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
       },
       methods: {
         onError(err, info) {
+          ctrl.renderError('VueJS Error', err.message, true);
           console.error('VueHtmlPanelCtrl error:', { err, info });
         },
         keyRows(rows, hasher) {
@@ -249,7 +269,14 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
 
     let refreshRate = ctrl.panel.refreshRate;
     if (refreshRate > 0 && ~~refreshRate === refreshRate) {
-      setTimeout(function() {
+      // Make sure that panel only gets refreshed according to the specified
+      // interval.
+      if (ctrl.refreshTimeout) {
+        clearTimeout(ctrl.refreshTimeout);
+        ctrl.refreshTimeout = null;
+      }
+
+      ctrl.refreshTimeout = setTimeout(function() {
         // Only update if the refresh rate remains unchanged
         if (refreshRate === ctrl.panel.refreshRate) {
           ctrl.updateView();
@@ -267,6 +294,8 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
     let ctrl = this;
     return _.cloneDeep({
       dataset: ctrl.dataset,
+      datasets: ctrl.datasets,
+      datasetsById: ctrl.datasetsById,
       panel: ctrl.panel.getOptionsToRemember(),
       JS,
       themeType: config.theme.type,
@@ -329,8 +358,17 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
         getVarParams(opt_filter, opt_negate) {
           return this.toParams(this.getVarValues(opt_filter, opt_negate), true);
         }
+      },
+      offsetDateTZ(date, opt_tzOffset) {
+        date = new Date(date);
+        opt_tzOffset = opt_tzOffset == null ? date.getTimezoneOffset() : opt_tzOffset;
+        return new Date(+date + opt_tzOffset * 6e4);
       }
     });
+  }
+
+  onDataError(event) {
+    this.renderError(event.statusText, event.data.message, true);
   }
 
   /**
@@ -339,24 +377,50 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
    *   An array of objects containing the data that is collected from the
    *   database.
    */
-  onDataReceived(dataList) {
-    if (dataList && dataList.length) {
-      this.dataset = dataList.map(data => {
-        let colNames = data.columns.map(c => 'string' === typeof c ? c : c.text);
-        return {
-          columnNames: colNames,
-          rows: data.rows.map(row => {
-            return row.reduceRight((carry, cell, cellIndex) => {
-              carry[colNames[cellIndex]] = cell;
-              return carry;
-            }, {});
-          }),
-          raw: data
-        };
+  onDataReceived(dataList, a, b) {
+    this.datasets = this.dataset = [];
+    this.datasetsById = {};
+
+    if (dataList) {
+      let datasetNames = [];
+
+      dataList.forEach(data => {
+        let { refId, datapoints, target, columns, rows } = data;
+        let datasetIndex = datasetNames.indexOf(refId);
+        let dataset;
+
+        if (data.type === 'table') {
+          let colNames = columns.map(c => 'string' === typeof c ? c : c.text);
+
+          this.datasetsById[refId] = dataset = {
+            columnNames: colNames,
+            rows: rows.map(row => {
+              return row.reduceRight((carry, cell, cellIndex) => {
+                carry[colNames[cellIndex]] = cell;
+                return carry;
+              }, {});
+            }),
+            raw: data
+          };
+        }
+        else {
+          dataset = this.datasetsById[refId] = this.datasetsById[refId]
+            || { columnNames: ['value', 'time', 'metric'], rows: [], raw: [], refId };
+
+          datapoints.forEach(row => {
+            dataset.rows.push(row.slice(0, 2).concat([target]));
+          });
+
+          if (JS.typeOf(dataset.raw) === 'Array') {
+            dataset.raw.push(data);
+          }
+        }
+
+        if (datasetIndex < 0) {
+          datasetIndex = datasetNames.push(refId) - 1;
+          this.datasets[datasetIndex] = this.dataset[datasetIndex] = dataset;
+        }
       });
-    }
-    else {
-      this.dataset = [];
     }
 
     this.updateView();

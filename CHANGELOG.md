@@ -1,5 +1,12 @@
 # Changelog
 
+- **v1.6.0**
+  - Added support for time series.
+  - Added `datasets` and `datasetsById` to the Vue scope.
+  - Show VueJS errors instead of content if any occur.
+  - Fixed the display of the Vue scope when editing.
+  - Fixed bug where refresh rate is reduced after updating panel.
+
 - **v1.5.0**
   - Added an option to define if `1em` will be the content height, the content width, the maximum of the content dimensions, the minimum of the content dimensions or the average of the content dimensions.
 

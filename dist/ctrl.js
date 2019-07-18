@@ -122,6 +122,8 @@ function (_MetricsPanelCtrl) {
 
     _this.events.on('init-edit-mode', _this.onInitEditMode.bind(_assertThisInitialized(_this)));
 
+    _this.events.on('data-error', _this.onDataError.bind(_assertThisInitialized(_this)));
+
     _this.events.on('data-received', _this.onDataReceived.bind(_assertThisInitialized(_this)));
 
     _this.events.on('data-snapshot-load', _this.onDataReceived.bind(_assertThisInitialized(_this)));
@@ -130,7 +132,6 @@ function (_MetricsPanelCtrl) {
 
     _this.events.on('init-panel-actions', _this.onInitPanelActions.bind(_assertThisInitialized(_this))); // Additional events that we can hook into...
     // this.events.on('component-did-mount', this.onComponentDidMount.bind(this));
-    // this.events.on('data-error', this.onDataError.bind(this));
     // this.events.on('panel-size-changed', this.onPanelSizeChanged.bind(this));
     // this.events.on('panel-teardown', this.onPanelTeardown.bind(this));
     // this.events.on('refresh', this.onRefresh.bind(this));
@@ -139,13 +140,46 @@ function (_MetricsPanelCtrl) {
 
     return _this;
   }
-  /**
-   * Executed when panel actions should be loaded.
-   * @param {*} actions Actions to be added.
-   */
-
 
   _createClass(VueHtmlPanelCtrl, [{
+    key: "renderError",
+    value: function renderError(title, message, isMonospace) {
+      this.panelElement.html('').append(JS.dom({
+        _: 'div',
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          textAlign: 'center',
+          height: '100%'
+        },
+        $: [{
+          _: 'div',
+          cls: 'alert alert-error',
+          style: {
+            margin: '0px auto'
+          },
+          $: {
+            _: 'div',
+            $: [{
+              _: 'h2',
+              style: {
+                color: '#FFF'
+              },
+              text: title
+            }, {
+              _: isMonospace ? 'pre' : 'div',
+              text: message
+            }]
+          }
+        }]
+      }));
+    }
+    /**
+     * Executed when panel actions should be loaded.
+     * @param {*} actions Actions to be added.
+     */
+
+  }, {
     key: "onInitPanelActions",
     value: function onInitPanelActions(actions) {
       var tablesSubmenu = this.panelElement.find('table').toArray().reduce(function (carry, table, index) {
@@ -247,7 +281,7 @@ function (_MetricsPanelCtrl) {
     value: function logVueScope() {
       // If in editing mode show the html scope.
       if (this.panel.isEditing) {
-        console.debug('Data values available:', this.getVueScope());
+        console.log('Data values available:', this.getVueScope());
       }
     }
   }, {
@@ -306,6 +340,7 @@ function (_MetricsPanelCtrl) {
         },
         methods: {
           onError: function onError(err, info) {
+            ctrl.renderError('VueJS Error', err.message, true);
             console.error('VueHtmlPanelCtrl error:', {
               err: err,
               info: info
@@ -338,7 +373,14 @@ function (_MetricsPanelCtrl) {
       var refreshRate = ctrl.panel.refreshRate;
 
       if (refreshRate > 0 && ~~refreshRate === refreshRate) {
-        setTimeout(function () {
+        // Make sure that panel only gets refreshed according to the specified
+        // interval.
+        if (ctrl.refreshTimeout) {
+          clearTimeout(ctrl.refreshTimeout);
+          ctrl.refreshTimeout = null;
+        }
+
+        ctrl.refreshTimeout = setTimeout(function () {
           // Only update if the refresh rate remains unchanged
           if (refreshRate === ctrl.panel.refreshRate) {
             ctrl.updateView();
@@ -358,6 +400,8 @@ function (_MetricsPanelCtrl) {
       var ctrl = this;
       return _lodash.default.cloneDeep({
         dataset: ctrl.dataset,
+        datasets: ctrl.datasets,
+        datasetsById: ctrl.datasetsById,
         panel: ctrl.panel.getOptionsToRemember(),
         JS: JS,
         themeType: _config.default.theme.type,
@@ -432,8 +476,18 @@ function (_MetricsPanelCtrl) {
           getVarParams: function getVarParams(opt_filter, opt_negate) {
             return this.toParams(this.getVarValues(opt_filter, opt_negate), true);
           }
+        },
+        offsetDateTZ: function offsetDateTZ(date, opt_tzOffset) {
+          date = new Date(date);
+          opt_tzOffset = opt_tzOffset == null ? date.getTimezoneOffset() : opt_tzOffset;
+          return new Date(+date + opt_tzOffset * 6e4);
         }
       });
+    }
+  }, {
+    key: "onDataError",
+    value: function onDataError(event) {
+      this.renderError(event.statusText, event.data.message, true);
     }
     /**
      * Executed whenever data is received from the database for this panel.
@@ -444,25 +498,58 @@ function (_MetricsPanelCtrl) {
 
   }, {
     key: "onDataReceived",
-    value: function onDataReceived(dataList) {
-      if (dataList && dataList.length) {
-        this.dataset = dataList.map(function (data) {
-          var colNames = data.columns.map(function (c) {
-            return 'string' === typeof c ? c : c.text;
-          });
-          return {
-            columnNames: colNames,
-            rows: data.rows.map(function (row) {
-              return row.reduceRight(function (carry, cell, cellIndex) {
-                carry[colNames[cellIndex]] = cell;
-                return carry;
-              }, {});
-            }),
-            raw: data
-          };
+    value: function onDataReceived(dataList, a, b) {
+      var _this3 = this;
+
+      this.datasets = this.dataset = [];
+      this.datasetsById = {};
+
+      if (dataList) {
+        var datasetNames = [];
+        dataList.forEach(function (data) {
+          var refId = data.refId,
+              datapoints = data.datapoints,
+              target = data.target,
+              columns = data.columns,
+              rows = data.rows;
+          var datasetIndex = datasetNames.indexOf(refId);
+          var dataset;
+
+          if (data.type === 'table') {
+            var colNames = columns.map(function (c) {
+              return 'string' === typeof c ? c : c.text;
+            });
+            _this3.datasetsById[refId] = dataset = {
+              columnNames: colNames,
+              rows: rows.map(function (row) {
+                return row.reduceRight(function (carry, cell, cellIndex) {
+                  carry[colNames[cellIndex]] = cell;
+                  return carry;
+                }, {});
+              }),
+              raw: data
+            };
+          } else {
+            dataset = _this3.datasetsById[refId] = _this3.datasetsById[refId] || {
+              columnNames: ['value', 'time', 'metric'],
+              rows: [],
+              raw: [],
+              refId: refId
+            };
+            datapoints.forEach(function (row) {
+              dataset.rows.push(row.slice(0, 2).concat([target]));
+            });
+
+            if (JS.typeOf(dataset.raw) === 'Array') {
+              dataset.raw.push(data);
+            }
+          }
+
+          if (datasetIndex < 0) {
+            datasetIndex = datasetNames.push(refId) - 1;
+            _this3.datasets[datasetIndex] = _this3.dataset[datasetIndex] = dataset;
+          }
         });
-      } else {
-        this.dataset = [];
       }
 
       this.updateView();
