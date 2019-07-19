@@ -4,6 +4,7 @@
   - Added support for time series.
   - Added `datasets` and `datasetsById` to the Vue scope.
   - Show VueJS errors instead of content if any occur.
+  - Updated YourJS (`JS`) to v2.18.0.
   - Fixed the display of the Vue scope when editing.
   - Fixed bug where refresh rate is reduced after updating panel.
 
