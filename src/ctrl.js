@@ -1,6 +1,7 @@
 import {MetricsPanelCtrl} from 'app/plugins/sdk';
 import _ from 'lodash';
 import * as JS from './external/YourJS.min';
+import * as html2canvas from './external/html2canvas.min';
 import { pseudoCssToJSON, toCSV, tableToArray } from './helper-functions';
 import * as Vue from './external/vue.min';
 import config from 'app/core/config';
@@ -126,6 +127,12 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
         actions.push.apply(actions, [{ divider: true, role: 'Editor' }].concat(datasetsSubmenu));
       }
     }
+
+    actions.push({
+      text: 'Screenshot As PNG',
+      icon: 'fa fa-fw fa-image',
+      click: 'ctrl.downloadPNG()'
+    });
   }
 
   /**
@@ -141,6 +148,16 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
    */
   onViewModeChanged() {
     this.logVueScope();
+  }
+
+  downloadPNG() {
+    html2canvas(this.panelElement.find('div')[0]).then(canvas => {
+      JS.dom({
+        _: 'a',
+        href: canvas.toDataURL(),
+        download: this.panel.title + JS.formatDate(new Date, " (YYYY-MM-DD 'at' H.mm.ss)") + '.screenshot.png'
+      }).click();
+    });
   }
 
   csvifyDataset(datasetIndex) {

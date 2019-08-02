@@ -11,6 +11,8 @@ var _lodash = _interopRequireDefault(require("lodash"));
 
 var JS = _interopRequireWildcard(require("./external/YourJS.min"));
 
+var html2canvas = _interopRequireWildcard(require("./external/html2canvas.min"));
+
 var _helperFunctions = require("./helper-functions");
 
 var Vue = _interopRequireWildcard(require("./external/vue.min"));
@@ -223,6 +225,12 @@ function (_MetricsPanelCtrl) {
           }].concat(datasetsSubmenu));
         }
       }
+
+      actions.push({
+        text: 'Screenshot As PNG',
+        icon: 'fa fa-fw fa-image',
+        click: 'ctrl.downloadPNG()'
+      });
     }
     /**
      * Executed before showing edit mode.
@@ -242,6 +250,19 @@ function (_MetricsPanelCtrl) {
     key: "onViewModeChanged",
     value: function onViewModeChanged() {
       this.logVueScope();
+    }
+  }, {
+    key: "downloadPNG",
+    value: function downloadPNG() {
+      var _this2 = this;
+
+      html2canvas(this.panelElement.find('div')[0]).then(function (canvas) {
+        JS.dom({
+          _: 'a',
+          href: canvas.toDataURL(),
+          download: _this2.panel.title + JS.formatDate(new Date(), " (YYYY-MM-DD 'at' H.mm.ss)") + '.screenshot.png'
+        }).click();
+      });
     }
   }, {
     key: "csvifyDataset",
@@ -413,7 +434,7 @@ function (_MetricsPanelCtrl) {
             return decodeURIComponent((value + '').replace(/\+/g, '%20'));
           },
           toParams: function toParams(objValues, opt_prefixVar) {
-            var _this2 = this;
+            var _this3 = this;
 
             return Object.entries(objValues).reduce(function (arrParams, _ref) {
               var _ref2 = _slicedToArray(_ref, 2),
@@ -421,7 +442,7 @@ function (_MetricsPanelCtrl) {
                   value = _ref2[1];
 
               return arrParams.concat(JS.toArray(value).map(function (value) {
-                return _this2.encode((opt_prefixVar ? 'var-' : '') + key) + '=' + _this2.encode(value);
+                return _this3.encode((opt_prefixVar ? 'var-' : '') + key) + '=' + _this3.encode(value);
               }));
             }, []).join('&');
           },
@@ -499,7 +520,7 @@ function (_MetricsPanelCtrl) {
   }, {
     key: "onDataReceived",
     value: function onDataReceived(dataList, a, b) {
-      var _this3 = this;
+      var _this4 = this;
 
       this.datasets = this.dataset = [];
       this.datasetsById = {};
@@ -519,7 +540,7 @@ function (_MetricsPanelCtrl) {
             var colNames = columns.map(function (c) {
               return 'string' === typeof c ? c : c.text;
             });
-            _this3.datasetsById[refId] = dataset = {
+            _this4.datasetsById[refId] = dataset = {
               columnNames: colNames,
               rows: rows.map(function (row) {
                 return row.reduceRight(function (carry, cell, cellIndex) {
@@ -530,7 +551,7 @@ function (_MetricsPanelCtrl) {
               raw: data
             };
           } else {
-            dataset = _this3.datasetsById[refId] = _this3.datasetsById[refId] || {
+            dataset = _this4.datasetsById[refId] = _this4.datasetsById[refId] || {
               columnNames: ['value', 'time', 'metric'],
               rows: [],
               raw: [],
@@ -547,7 +568,7 @@ function (_MetricsPanelCtrl) {
 
           if (datasetIndex < 0) {
             datasetIndex = datasetNames.push(refId) - 1;
-            _this3.datasets[datasetIndex] = _this3.dataset[datasetIndex] = dataset;
+            _this4.datasets[datasetIndex] = _this4.dataset[datasetIndex] = dataset;
           }
         });
       }
