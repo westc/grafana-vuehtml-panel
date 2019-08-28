@@ -1,5 +1,6 @@
 import {MetricsPanelCtrl} from 'app/plugins/sdk';
 import _ from 'lodash';
+import * as saveAs from './external/FileSaver.min.js';
 import * as JS from './external/YourJS.min';
 import * as html2canvas from './external/html2canvas.min';
 import { pseudoCssToJSON, toCSV, tableToArray } from './helper-functions';
@@ -162,29 +163,23 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
 
   csvifyDataset(datasetIndex) {
     let data = this.dataset[datasetIndex];
-    let { columnNames, rows } = data;
+    let { columnNames } = data;
 
-    JS.dom({
-      _: 'a',
-      href: 'data:text/csv;charset=utf-8,' + encodeURIComponent(
-        toCSV(
-          rows.map(row => columnNames.map(cName => row[cName])),
+    let csvContent = toCSV(
+      data.rows.map(row => columnNames.map(cName => row[cName])),
           { headers: columnNames }
-        )
-      ),
-      download: this.panel.title + JS.formatDate(new Date, " (YYYY-MM-DD 'at' H.mm.ss)") + `.dataset-${data.raw.refId}.csv`
-    }).click();
+    );
+    let blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+    let fileName = this.panel.title + JS.formatDate(new Date, " (YYYY-MM-DD 'at' H.mm.ss)") + `.dataset-${data.raw.refId}.csv`;
+    saveAs(blob, fileName);
   }
 
   csvifyTable(index) {
     let table = this.panelElement.find('table').toArray()[index];
     let title = table.getAttribute('data-title') || (this.panel.title + ` Table ${index + 1}`);
-
-    JS.dom({
-      _: 'a',
-      href: 'data:text/csv;charset=utf-8,' + encodeURIComponent(toCSV(tableToArray(table))),
-      download: title + JS.formatDate(new Date, " (YYYY-MM-DD 'at' H.mm.ss)") + `.csv`
-    }).click();
+    let blob = new Blob([toCSV(tableToArray(table))], { type: 'text/csv;charset=utf-8' });
+    let fileName = title + JS.formatDate(new Date, " (YYYY-MM-DD 'at' H.mm.ss)") + `.csv`;
+    saveAs(blob, fileName);
   }
 
   /**

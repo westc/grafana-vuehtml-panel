@@ -9,6 +9,8 @@ var _sdk = require("app/plugins/sdk");
 
 var _lodash = _interopRequireDefault(require("lodash"));
 
+var saveAs = _interopRequireWildcard(require("./external/FileSaver.min.js"));
+
 var JS = _interopRequireWildcard(require("./external/YourJS.min"));
 
 var html2canvas = _interopRequireWildcard(require("./external/html2canvas.min"));
@@ -268,30 +270,30 @@ function (_MetricsPanelCtrl) {
     key: "csvifyDataset",
     value: function csvifyDataset(datasetIndex) {
       var data = this.dataset[datasetIndex];
-      var columnNames = data.columnNames,
-          rows = data.rows;
-      JS.dom({
-        _: 'a',
-        href: 'data:text/csv;charset=utf-8,' + encodeURIComponent((0, _helperFunctions.toCSV)(rows.map(function (row) {
-          return columnNames.map(function (cName) {
-            return row[cName];
-          });
-        }), {
-          headers: columnNames
-        })),
-        download: this.panel.title + JS.formatDate(new Date(), " (YYYY-MM-DD 'at' H.mm.ss)") + ".dataset-".concat(data.raw.refId, ".csv")
-      }).click();
+      var columnNames = data.columnNames;
+      var csvContent = (0, _helperFunctions.toCSV)(data.rows.map(function (row) {
+        return columnNames.map(function (cName) {
+          return row[cName];
+        });
+      }), {
+        headers: columnNames
+      });
+      var blob = new Blob([csvContent], {
+        type: 'text/csv;charset=utf-8'
+      });
+      var fileName = this.panel.title + JS.formatDate(new Date(), " (YYYY-MM-DD 'at' H.mm.ss)") + ".dataset-".concat(data.raw.refId, ".csv");
+      saveAs(blob, fileName);
     }
   }, {
     key: "csvifyTable",
     value: function csvifyTable(index) {
       var table = this.panelElement.find('table').toArray()[index];
       var title = table.getAttribute('data-title') || this.panel.title + " Table ".concat(index + 1);
-      JS.dom({
-        _: 'a',
-        href: 'data:text/csv;charset=utf-8,' + encodeURIComponent((0, _helperFunctions.toCSV)((0, _helperFunctions.tableToArray)(table))),
-        download: title + JS.formatDate(new Date(), " (YYYY-MM-DD 'at' H.mm.ss)") + ".csv"
-      }).click();
+      var blob = new Blob([(0, _helperFunctions.toCSV)((0, _helperFunctions.tableToArray)(table))], {
+        type: 'text/csv;charset=utf-8'
+      });
+      var fileName = title + JS.formatDate(new Date(), " (YYYY-MM-DD 'at' H.mm.ss)") + ".csv";
+      saveAs(blob, fileName);
     }
     /**
      * Adds the Vue scope to the console log if in editing mode.

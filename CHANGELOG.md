@@ -1,5 +1,11 @@
 # Changelog
 
+- **v1.7.1**
+  - Fixed UTF-8 downloads which caused some characters to render incorrectly in Excel.
+
+- **v1.7.0**
+  - Added support for saving the content as a PNG.
+
 - **v1.6.0**
   - Added support for time series.
   - Added `datasets` and `datasetsById` to the Vue scope.
