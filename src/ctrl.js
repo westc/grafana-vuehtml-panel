@@ -329,12 +329,12 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
         },
         getTimeValues(opt_name) {
           let result = {};
-          let { time } = ctrl.timeSrv;
+          let { from, to } = ctrl.timeSrv.timeRangeForUrl();
           if (opt_name != 'to') {
-            result.from = time.from;
+            result.from = from;
           }
           if (opt_name != 'from') {
-            result.to = time.to;
+            result.to = to;
           }
           return result;
         },

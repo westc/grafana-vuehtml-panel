@@ -1,5 +1,8 @@
 # Changelog
 
+- **v1.7.2**
+  - Fixed `url.getTimeValues()` and `url.getTimeParams()` so that if they contain custom dates the dates will display correctly in the URL.
+
 - **v1.7.1**
   - Fixed UTF-8 downloads which caused some characters to render incorrectly in Excel.
 

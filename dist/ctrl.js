@@ -450,14 +450,17 @@ function (_MetricsPanelCtrl) {
           },
           getTimeValues: function getTimeValues(opt_name) {
             var result = {};
-            var time = ctrl.timeSrv.time;
+
+            var _ctrl$timeSrv$timeRan = ctrl.timeSrv.timeRangeForUrl(),
+                from = _ctrl$timeSrv$timeRan.from,
+                to = _ctrl$timeSrv$timeRan.to;
 
             if (opt_name != 'to') {
-              result.from = time.from;
+              result.from = from;
             }
 
             if (opt_name != 'from') {
-              result.to = time.to;
+              result.to = to;
             }
 
             return result;
