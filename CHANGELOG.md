@@ -1,5 +1,8 @@
 # Changelog
 
+- **v1.7.3**
+  - Fixed critical issue which caused a memory leak if using multiple Vues with refresh rates.
+
 - **v1.7.2**
   - Fixed `url.getTimeValues()` and `url.getTimeParams()` so that if they contain custom dates the dates will display correctly in the URL.
 

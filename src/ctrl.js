@@ -219,81 +219,88 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
    */
   updateView() {
     let ctrl = this;
-    let jElemPC = ctrl.panelElement;
-    let elemPC = jElemPC[0];
-    let elem = JS.dom({ _: 'div' });
-    let panel = ctrl.panel;
-    let cls = ('_' + Math.random()).replace(/0\./, +new Date);
 
-    this.render(); // Recalculates `em` size if it is supposed to.
-
-    jElemPC.html('').append(elem);
-
-    elemPC.className = elemPC.className.replace(/(^|\s+)_\d+(?=\s+|$)/g, ' ').trim() + ' ' + cls;
+    ctrl.render(); // Recalculates `em` size if it is supposed to.
 
     // Data available to the HTML code.
     let vueScope = ctrl.getVueScope();
 
-    if (ctrl.vue) {
+    if (ctrl.vue && ctrl.vue.$destroy) {
       ctrl.vue.$destroy();
     }
+    else {
+      rebuildVue();
+    }
 
-    ctrl.vue = new Vue({
-      template: `<div>${panel.html}</div>`,
-      el: elem,
-      data: vueScope,
-      mounted() {
-        // Remove the old stylesheet from the document if it exists.
-        let stylesheet = ctrl.stylesheet;
-        let styleParent = stylesheet && stylesheet.parentNode;
-        if (styleParent) {
-          styleParent.removeChild(stylesheet);
-        }
+    function rebuildVue() {
+      let jElemPC = ctrl.panelElement;
+      let elemPC = jElemPC[0];
+      let elem = JS.dom({ _: 'div' });
+      let panel = ctrl.panel;
+      let cls = ('_' + Math.random()).replace(/0\./, +new Date);
 
-        // Add the nested CSS to the panel.
-        ctrl.stylesheet = JS.css(JSON.parse(pseudoCssToJSON(panel.css)), '.' + cls);
-      },
-      methods: {
-        onError(err, info) {
-          ctrl.renderError('VueJS Error', err.message, true);
-          console.error('VueHtmlPanelCtrl error:', { err, info });
+      jElemPC.html('').append(elem);
+
+      elemPC.className = elemPC.className.replace(/(^|\s+)_\d+(?=\s+|$)/g, ' ').trim() + ' ' + cls;
+
+      ctrl.vue = new Vue({
+        template: `<div>${panel.html}</div>`,
+        el: elem,
+        data: vueScope,
+        mounted() {
+          // Remove the old stylesheet from the document if it exists.
+          let stylesheet = ctrl.stylesheet;
+          let styleParent = stylesheet && stylesheet.parentNode;
+          if (styleParent) {
+            styleParent.removeChild(stylesheet);
+          }
+
+          // Add the nested CSS to the panel.
+          ctrl.stylesheet = JS.css(JSON.parse(pseudoCssToJSON(panel.css)), '.' + cls);
         },
-        keyRows(rows, hasher) {
-          hasher = normalizeHasher(hasher);
-          return rows.reduce((carry, row) => {
-            let key = hasher(row);
-            carry[key] = _.has(carry, key) ? carry[key].concat([row]) : [row];
-            return carry;
-          }, {});
-        },
-        indexRows(rows, hasher) {
-          hasher = normalizeHasher(hasher);
-          let keys = rows.map(row => hasher(row));
-          let uniqueKeys = _.uniq(keys);
-          return rows.reduce((carry, row, rowIndex) => {
-            let realIndex = uniqueKeys.indexOf(keys[rowIndex]);
-            carry[realIndex] = _.has(carry, realIndex) ? carry[realIndex].concat([row]) : [row];
-            return carry;
-          }, []);
+        destroyed: rebuildVue,
+        methods: {
+          onError(err, info) {
+            ctrl.renderError('VueJS Error', err.message, true);
+            console.error('VueHtmlPanelCtrl error:', { err, info });
+          },
+          keyRows(rows, hasher) {
+            hasher = normalizeHasher(hasher);
+            return rows.reduce((carry, row) => {
+              let key = hasher(row);
+              carry[key] = _.has(carry, key) ? carry[key].concat([row]) : [row];
+              return carry;
+            }, {});
+          },
+          indexRows(rows, hasher) {
+            hasher = normalizeHasher(hasher);
+            let keys = rows.map(row => hasher(row));
+            let uniqueKeys = _.uniq(keys);
+            return rows.reduce((carry, row, rowIndex) => {
+              let realIndex = uniqueKeys.indexOf(keys[rowIndex]);
+              carry[realIndex] = _.has(carry, realIndex) ? carry[realIndex].concat([row]) : [row];
+              return carry;
+            }, []);
+          }
         }
-      }
-    });
+      });
 
-    let refreshRate = ctrl.panel.refreshRate;
-    if (refreshRate > 0 && ~~refreshRate === refreshRate) {
-      // Make sure that panel only gets refreshed according to the specified
-      // interval.
-      if (ctrl.refreshTimeout) {
-        clearTimeout(ctrl.refreshTimeout);
-        ctrl.refreshTimeout = null;
-      }
-
-      ctrl.refreshTimeout = setTimeout(function() {
-        // Only update if the refresh rate remains unchanged
-        if (refreshRate === ctrl.panel.refreshRate) {
-          ctrl.updateView();
+      let refreshRate = ctrl.panel.refreshRate;
+      if (refreshRate > 0 && ~~refreshRate === refreshRate) {
+        // Make sure that panel only gets refreshed according to the specified
+        // interval.
+        if (ctrl.refreshTimeout) {
+          clearTimeout(ctrl.refreshTimeout);
+          ctrl.refreshTimeout = null;
         }
-      }, refreshRate * 1e3);
+        
+        ctrl.refreshTimeout = setTimeout(function() {
+          // Only update if the refresh rate remains unchanged
+          if (refreshRate === ctrl.panel.refreshRate) {
+            ctrl.updateView();
+          }
+        }, refreshRate * 1e3);
+      }
     }
   }
 

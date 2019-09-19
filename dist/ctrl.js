@@ -327,88 +327,93 @@ function (_MetricsPanelCtrl) {
     key: "updateView",
     value: function updateView() {
       var ctrl = this;
-      var jElemPC = ctrl.panelElement;
-      var elemPC = jElemPC[0];
-      var elem = JS.dom({
-        _: 'div'
-      });
-      var panel = ctrl.panel;
-      var cls = ('_' + Math.random()).replace(/0\./, +new Date());
-      this.render(); // Recalculates `em` size if it is supposed to.
-
-      jElemPC.html('').append(elem);
-      elemPC.className = elemPC.className.replace(/(^|\s+)_\d+(?=\s+|$)/g, ' ').trim() + ' ' + cls; // Data available to the HTML code.
+      ctrl.render(); // Recalculates `em` size if it is supposed to.
+      // Data available to the HTML code.
 
       var vueScope = ctrl.getVueScope();
 
-      if (ctrl.vue) {
+      if (ctrl.vue && ctrl.vue.$destroy) {
         ctrl.vue.$destroy();
+      } else {
+        rebuildVue();
       }
 
-      ctrl.vue = new Vue({
-        template: "<div>".concat(panel.html, "</div>"),
-        el: elem,
-        data: vueScope,
-        mounted: function mounted() {
-          // Remove the old stylesheet from the document if it exists.
-          var stylesheet = ctrl.stylesheet;
-          var styleParent = stylesheet && stylesheet.parentNode;
+      function rebuildVue() {
+        var jElemPC = ctrl.panelElement;
+        var elemPC = jElemPC[0];
+        var elem = JS.dom({
+          _: 'div'
+        });
+        var panel = ctrl.panel;
+        var cls = ('_' + Math.random()).replace(/0\./, +new Date());
+        jElemPC.html('').append(elem);
+        elemPC.className = elemPC.className.replace(/(^|\s+)_\d+(?=\s+|$)/g, ' ').trim() + ' ' + cls;
+        ctrl.vue = new Vue({
+          template: "<div>".concat(panel.html, "</div>"),
+          el: elem,
+          data: vueScope,
+          mounted: function mounted() {
+            // Remove the old stylesheet from the document if it exists.
+            var stylesheet = ctrl.stylesheet;
+            var styleParent = stylesheet && stylesheet.parentNode;
 
-          if (styleParent) {
-            styleParent.removeChild(stylesheet);
-          } // Add the nested CSS to the panel.
+            if (styleParent) {
+              styleParent.removeChild(stylesheet);
+            } // Add the nested CSS to the panel.
 
 
-          ctrl.stylesheet = JS.css(JSON.parse((0, _helperFunctions.pseudoCssToJSON)(panel.css)), '.' + cls);
-        },
-        methods: {
-          onError: function onError(err, info) {
-            ctrl.renderError('VueJS Error', err.message, true);
-            console.error('VueHtmlPanelCtrl error:', {
-              err: err,
-              info: info
-            });
+            ctrl.stylesheet = JS.css(JSON.parse((0, _helperFunctions.pseudoCssToJSON)(panel.css)), '.' + cls);
           },
-          keyRows: function keyRows(rows, hasher) {
-            hasher = normalizeHasher(hasher);
-            return rows.reduce(function (carry, row) {
-              var key = hasher(row);
-              carry[key] = _lodash.default.has(carry, key) ? carry[key].concat([row]) : [row];
-              return carry;
-            }, {});
-          },
-          indexRows: function indexRows(rows, hasher) {
-            hasher = normalizeHasher(hasher);
-            var keys = rows.map(function (row) {
-              return hasher(row);
-            });
+          destroyed: rebuildVue,
+          methods: {
+            onError: function onError(err, info) {
+              ctrl.renderError('VueJS Error', err.message, true);
+              console.error('VueHtmlPanelCtrl error:', {
+                err: err,
+                info: info
+              });
+            },
+            keyRows: function keyRows(rows, hasher) {
+              hasher = normalizeHasher(hasher);
+              return rows.reduce(function (carry, row) {
+                var key = hasher(row);
+                carry[key] = _lodash.default.has(carry, key) ? carry[key].concat([row]) : [row];
+                return carry;
+              }, {});
+            },
+            indexRows: function indexRows(rows, hasher) {
+              hasher = normalizeHasher(hasher);
+              var keys = rows.map(function (row) {
+                return hasher(row);
+              });
 
-            var uniqueKeys = _lodash.default.uniq(keys);
+              var uniqueKeys = _lodash.default.uniq(keys);
 
-            return rows.reduce(function (carry, row, rowIndex) {
-              var realIndex = uniqueKeys.indexOf(keys[rowIndex]);
-              carry[realIndex] = _lodash.default.has(carry, realIndex) ? carry[realIndex].concat([row]) : [row];
-              return carry;
-            }, []);
+              return rows.reduce(function (carry, row, rowIndex) {
+                var realIndex = uniqueKeys.indexOf(keys[rowIndex]);
+                carry[realIndex] = _lodash.default.has(carry, realIndex) ? carry[realIndex].concat([row]) : [row];
+                return carry;
+              }, []);
+            }
           }
-        }
-      });
-      var refreshRate = ctrl.panel.refreshRate;
+        });
+        var refreshRate = ctrl.panel.refreshRate;
 
-      if (refreshRate > 0 && ~~refreshRate === refreshRate) {
-        // Make sure that panel only gets refreshed according to the specified
-        // interval.
-        if (ctrl.refreshTimeout) {
-          clearTimeout(ctrl.refreshTimeout);
-          ctrl.refreshTimeout = null;
-        }
-
-        ctrl.refreshTimeout = setTimeout(function () {
-          // Only update if the refresh rate remains unchanged
-          if (refreshRate === ctrl.panel.refreshRate) {
-            ctrl.updateView();
+        if (refreshRate > 0 && ~~refreshRate === refreshRate) {
+          // Make sure that panel only gets refreshed according to the specified
+          // interval.
+          if (ctrl.refreshTimeout) {
+            clearTimeout(ctrl.refreshTimeout);
+            ctrl.refreshTimeout = null;
           }
-        }, refreshRate * 1e3);
+
+          ctrl.refreshTimeout = setTimeout(function () {
+            // Only update if the refresh rate remains unchanged
+            if (refreshRate === ctrl.panel.refreshRate) {
+              ctrl.updateView();
+            }
+          }, refreshRate * 1e3);
+        }
       }
     }
     /**
