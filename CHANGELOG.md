@@ -1,7 +1,10 @@
 # Changelog
 
-- **v1.7.4**
-  - Fixed critical issue which prevented updated data from refreshing in the view.
+- **v1.8.0**
+  - Added a reference to `dashboard` (for the current dashboard) and `allDashboards` for an array of all of the dashboards.
+  - Updated YourJS (`JS`) to v2.21.0.
+  - Now controlling updates by using dynamic templates in Vue.
+  - Fixed critical issue which prevented updated data from refreshing in the view.  Found that the refreshes were slow because `_.cloneDeep()` on the `dashboard` obect took an increasingly long time.
 
 - **v1.7.3**
   - Fixed critical issue which caused a memory leak if using multiple Vues with refresh rates.
