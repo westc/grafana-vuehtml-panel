@@ -1,7 +1,7 @@
 import {MetricsPanelCtrl} from 'app/plugins/sdk';
 import _ from 'lodash';
 import * as saveAs from './external/FileSaver.min.js';
-import * as JS from './external/YourJS.min';
+import * as JS from './external/YourJS.JS.min';
 import * as html2canvas from './external/html2canvas.min';
 import { pseudoCssToJSON, toCSV, tableToArray } from './helper-functions';
 import * as Vue from './external/vue.min';
@@ -188,7 +188,13 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
   logVueScope() {
     // If in editing mode show the html scope.
     if (this.panel.isEditing) {
-      console.log('Data values available:', this.getVueScope());
+      let interval = setInterval(_ => {
+        if (this.vue) {
+          clearInterval(interval);
+          console.log('Available data values:', this.vue.rawTemplate.data);
+          console.log('Available methods:', this.vue.rawTemplate.methods);
+        }
+      }, 250);
     }
   }
 
@@ -219,88 +225,97 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
    */
   updateView() {
     let ctrl = this;
-
+    let { panel } = ctrl;
+    let { refreshRate } = panel;
+    
+    let jElemPC = ctrl.panelElement;
+    let elemPC = jElemPC[0];
+    let elem = JS.dom({ _: 'div' });
+    let cls = ('_' + Math.random()).replace(/0\./, +new Date);
+    
     ctrl.render(); // Recalculates `em` size if it is supposed to.
-
+    
     // Data available to the HTML code.
+    let myVue = ctrl.vue;
     let vueScope = ctrl.getVueScope();
+    let vueScopeData = JS.filter(vueScope, value => 'function' !== typeof value);
+    let vueScopeMethods = _.extend(
+      JS.filter(vueScope, value => 'function' === typeof value),
+      {
+        getVue() {
+          return myVue;
+        }
+      }
+    );
 
-    if (ctrl.vue && ctrl.vue.$destroy) {
-      ctrl.vue.$destroy();
+    let templateValues = {
+      template: `<div>${panel.html}</div>`,
+      data: vueScopeData,
+      methods: vueScopeMethods
+    };
+
+    // Remove the old stylesheet from the document if it exists.
+    let stylesheet = ctrl.stylesheet;
+    let styleParent = stylesheet && stylesheet.parentNode;
+    if (styleParent) {
+      styleParent.removeChild(stylesheet);
+    }
+
+    // Add the nested CSS to the panel.
+    ctrl.stylesheet = JS.css(JSON.parse(pseudoCssToJSON(panel.css)), '.' + cls);
+
+    elemPC.className = elemPC.className.replace(/(^|\s+)_\d+(?=\s+|$)/g, ' ').trim() + ' ' + cls;
+
+    // Gets all dashboards via the API.
+    getAllDashboards((data, isSuccess) => {
+      if (isSuccess) {
+        myVue.rawTemplate.data.allDashboards = data;
+      }
+    });
+
+    if (myVue) {
+      _.extend(myVue.rawTemplate, templateValues);
     }
     else {
-      rebuildVue();
-    }
-
-    function rebuildVue() {
-      let jElemPC = ctrl.panelElement;
-      let elemPC = jElemPC[0];
-      let elem = JS.dom({ _: 'div' });
-      let panel = ctrl.panel;
-      let cls = ('_' + Math.random()).replace(/0\./, +new Date);
-
       jElemPC.html('').append(elem);
 
-      elemPC.className = elemPC.className.replace(/(^|\s+)_\d+(?=\s+|$)/g, ' ').trim() + ' ' + cls;
-
-      ctrl.vue = new Vue({
-        template: `<div>${panel.html}</div>`,
+      myVue = ctrl.vue = new Vue({
         el: elem,
-        data: vueScope,
-        mounted() {
-          // Remove the old stylesheet from the document if it exists.
-          let stylesheet = ctrl.stylesheet;
-          let styleParent = stylesheet && stylesheet.parentNode;
-          if (styleParent) {
-            styleParent.removeChild(stylesheet);
-          }
-
-          // Add the nested CSS to the panel.
-          ctrl.stylesheet = JS.css(JSON.parse(pseudoCssToJSON(panel.css)), '.' + cls);
+        template: `<div :is="template"></div>`,
+        data() {
+          return {
+            rawTemplate: templateValues
+          };
         },
-        destroyed: rebuildVue,
-        methods: {
-          onError(err, info) {
-            ctrl.renderError('VueJS Error', err.message, true);
-            console.error('VueHtmlPanelCtrl error:', { err, info });
-          },
-          keyRows(rows, hasher) {
-            hasher = normalizeHasher(hasher);
-            return rows.reduce((carry, row) => {
-              let key = hasher(row);
-              carry[key] = _.has(carry, key) ? carry[key].concat([row]) : [row];
-              return carry;
-            }, {});
-          },
-          indexRows(rows, hasher) {
-            hasher = normalizeHasher(hasher);
-            let keys = rows.map(row => hasher(row));
-            let uniqueKeys = _.uniq(keys);
-            return rows.reduce((carry, row, rowIndex) => {
-              let realIndex = uniqueKeys.indexOf(keys[rowIndex]);
-              carry[realIndex] = _.has(carry, realIndex) ? carry[realIndex].concat([row]) : [row];
-              return carry;
-            }, []);
+        computed: {
+          template() {
+            let { template, data, methods } = this.rawTemplate;
+            return {
+              template,
+              data: function () {
+                return data;
+              },
+              methods
+            };
           }
         }
       });
+    }
 
-      let refreshRate = ctrl.panel.refreshRate;
-      if (refreshRate > 0 && ~~refreshRate === refreshRate) {
-        // Make sure that panel only gets refreshed according to the specified
-        // interval.
-        if (ctrl.refreshTimeout) {
-          clearTimeout(ctrl.refreshTimeout);
-          ctrl.refreshTimeout = null;
-        }
-        
-        ctrl.refreshTimeout = setTimeout(function() {
-          // Only update if the refresh rate remains unchanged
-          if (refreshRate === ctrl.panel.refreshRate) {
-            ctrl.updateView();
-          }
-        }, refreshRate * 1e3);
+    if (refreshRate > 0 && ~~refreshRate === refreshRate) {
+      // Make sure that panel only gets refreshed according to the specified
+      // interval.
+      if (ctrl.refreshTimeout) {
+        clearTimeout(ctrl.refreshTimeout);
+        ctrl.refreshTimeout = null;
       }
+
+      ctrl.refreshTimeout = setTimeout(function () {
+        // Only update if the refresh rate remains unchanged
+        if (refreshRate === ctrl.panel.refreshRate) {
+          ctrl.updateView();
+        }
+      }, refreshRate * 1e3);
     }
   }
 
@@ -311,7 +326,10 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
    */
   getVueScope() {
     let ctrl = this;
-    return _.cloneDeep({
+
+    let result = _.cloneDeep({
+      allDashboards: [],
+      dashboard: JS.filter(ctrl.dashboard, value => JS.isPrimitive(value)),
       dataset: ctrl.dataset,
       datasets: ctrl.datasets,
       datasetsById: ctrl.datasetsById,
@@ -382,8 +400,32 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
         date = new Date(date);
         opt_tzOffset = opt_tzOffset == null ? date.getTimezoneOffset() : opt_tzOffset;
         return new Date(+date + opt_tzOffset * 6e4);
+      },
+      onError(err, info) {
+        ctrl.renderError('VueJS Error', err.message, true);
+        console.error('VueHtmlPanelCtrl error:', { err, info });
+      },
+      keyRows(rows, hasher) {
+        hasher = normalizeHasher(hasher);
+        return rows.reduce((carry, row) => {
+          let key = hasher(row);
+          carry[key] = _.has(carry, key) ? carry[key].concat([row]) : [row];
+          return carry;
+        }, {});
+      },
+      indexRows(rows, hasher) {
+        hasher = normalizeHasher(hasher);
+        let keys = rows.map(row => hasher(row));
+        let uniqueKeys = _.uniq(keys);
+        return rows.reduce((carry, row, rowIndex) => {
+          let realIndex = uniqueKeys.indexOf(keys[rowIndex]);
+          carry[realIndex] = _.has(carry, realIndex) ? carry[realIndex].concat([row]) : [row];
+          return carry;
+        }, []);
       }
     });
+    
+    return result;
   }
 
   onDataError(event) {
@@ -396,7 +438,7 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
    *   An array of objects containing the data that is collected from the
    *   database.
    */
-  onDataReceived(dataList, a, b) {
+  onDataReceived(dataList) {
     this.datasets = this.dataset = [];
     this.datasetsById = {};
 
@@ -450,6 +492,18 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
     this.element = elem;
     this.panelElement = elem.find('.panel-content');
   }
+}
+
+function getAllDashboards(callback) {
+  getApiData(`search`, callback);
+}
+
+function getApiData(id, callback) {
+  jQuery.ajax(`/api/${id}`, {
+    complete(result, statusText) {
+      callback(result.responseJSON || result, statusText === 'success');
+    }
+  });
 }
 
 // Allows for error handling in vueToHTML().

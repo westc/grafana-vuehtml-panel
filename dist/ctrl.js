@@ -11,7 +11,7 @@ var _lodash = _interopRequireDefault(require("lodash"));
 
 var saveAs = _interopRequireWildcard(require("./external/FileSaver.min.js"));
 
-var JS = _interopRequireWildcard(require("./external/YourJS.min"));
+var JS = _interopRequireWildcard(require("./external/YourJS.JS.min"));
 
 var html2canvas = _interopRequireWildcard(require("./external/html2canvas.min"));
 
@@ -302,9 +302,17 @@ function (_MetricsPanelCtrl) {
   }, {
     key: "logVueScope",
     value: function logVueScope() {
+      var _this3 = this;
+
       // If in editing mode show the html scope.
       if (this.panel.isEditing) {
-        console.log('Data values available:', this.getVueScope());
+        var interval = setInterval(function (_) {
+          if (_this3.vue) {
+            clearInterval(interval);
+            console.log('Available data values:', _this3.vue.rawTemplate.data);
+            console.log('Available methods:', _this3.vue.rawTemplate.methods);
+          }
+        }, 250);
       }
     }
   }, {
@@ -327,93 +335,98 @@ function (_MetricsPanelCtrl) {
     key: "updateView",
     value: function updateView() {
       var ctrl = this;
+      var panel = ctrl.panel;
+      var refreshRate = panel.refreshRate;
+      var jElemPC = ctrl.panelElement;
+      var elemPC = jElemPC[0];
+      var elem = JS.dom({
+        _: 'div'
+      });
+      var cls = ('_' + Math.random()).replace(/0\./, +new Date());
       ctrl.render(); // Recalculates `em` size if it is supposed to.
       // Data available to the HTML code.
 
+      var myVue = ctrl.vue;
       var vueScope = ctrl.getVueScope();
+      var vueScopeData = JS.filter(vueScope, function (value) {
+        return 'function' !== typeof value;
+      });
 
-      if (ctrl.vue && ctrl.vue.$destroy) {
-        ctrl.vue.$destroy();
+      var vueScopeMethods = _lodash.default.extend(JS.filter(vueScope, function (value) {
+        return 'function' === typeof value;
+      }), {
+        getVue: function getVue() {
+          return myVue;
+        }
+      });
+
+      var templateValues = {
+        template: "<div>".concat(panel.html, "</div>"),
+        data: vueScopeData,
+        methods: vueScopeMethods
+      }; // Remove the old stylesheet from the document if it exists.
+
+      var stylesheet = ctrl.stylesheet;
+      var styleParent = stylesheet && stylesheet.parentNode;
+
+      if (styleParent) {
+        styleParent.removeChild(stylesheet);
+      } // Add the nested CSS to the panel.
+
+
+      ctrl.stylesheet = JS.css(JSON.parse((0, _helperFunctions.pseudoCssToJSON)(panel.css)), '.' + cls);
+      elemPC.className = elemPC.className.replace(/(^|\s+)_\d+(?=\s+|$)/g, ' ').trim() + ' ' + cls; // Gets all dashboards via the API.
+
+      getAllDashboards(function (data, isSuccess) {
+        if (isSuccess) {
+          myVue.rawTemplate.data.allDashboards = data;
+        }
+      });
+
+      if (myVue) {
+        _lodash.default.extend(myVue.rawTemplate, templateValues);
       } else {
-        rebuildVue();
+        jElemPC.html('').append(elem);
+        myVue = ctrl.vue = new Vue({
+          el: elem,
+          template: "<div :is=\"template\"></div>",
+          data: function data() {
+            return {
+              rawTemplate: templateValues
+            };
+          },
+          computed: {
+            template: function template() {
+              var _this$rawTemplate = this.rawTemplate,
+                  template = _this$rawTemplate.template,
+                  _data = _this$rawTemplate.data,
+                  methods = _this$rawTemplate.methods;
+              return {
+                template: template,
+                data: function data() {
+                  return _data;
+                },
+                methods: methods
+              };
+            }
+          }
+        });
       }
 
-      function rebuildVue() {
-        var jElemPC = ctrl.panelElement;
-        var elemPC = jElemPC[0];
-        var elem = JS.dom({
-          _: 'div'
-        });
-        var panel = ctrl.panel;
-        var cls = ('_' + Math.random()).replace(/0\./, +new Date());
-        jElemPC.html('').append(elem);
-        elemPC.className = elemPC.className.replace(/(^|\s+)_\d+(?=\s+|$)/g, ' ').trim() + ' ' + cls;
-        ctrl.vue = new Vue({
-          template: "<div>".concat(panel.html, "</div>"),
-          el: elem,
-          data: vueScope,
-          mounted: function mounted() {
-            // Remove the old stylesheet from the document if it exists.
-            var stylesheet = ctrl.stylesheet;
-            var styleParent = stylesheet && stylesheet.parentNode;
-
-            if (styleParent) {
-              styleParent.removeChild(stylesheet);
-            } // Add the nested CSS to the panel.
-
-
-            ctrl.stylesheet = JS.css(JSON.parse((0, _helperFunctions.pseudoCssToJSON)(panel.css)), '.' + cls);
-          },
-          destroyed: rebuildVue,
-          methods: {
-            onError: function onError(err, info) {
-              ctrl.renderError('VueJS Error', err.message, true);
-              console.error('VueHtmlPanelCtrl error:', {
-                err: err,
-                info: info
-              });
-            },
-            keyRows: function keyRows(rows, hasher) {
-              hasher = normalizeHasher(hasher);
-              return rows.reduce(function (carry, row) {
-                var key = hasher(row);
-                carry[key] = _lodash.default.has(carry, key) ? carry[key].concat([row]) : [row];
-                return carry;
-              }, {});
-            },
-            indexRows: function indexRows(rows, hasher) {
-              hasher = normalizeHasher(hasher);
-              var keys = rows.map(function (row) {
-                return hasher(row);
-              });
-
-              var uniqueKeys = _lodash.default.uniq(keys);
-
-              return rows.reduce(function (carry, row, rowIndex) {
-                var realIndex = uniqueKeys.indexOf(keys[rowIndex]);
-                carry[realIndex] = _lodash.default.has(carry, realIndex) ? carry[realIndex].concat([row]) : [row];
-                return carry;
-              }, []);
-            }
-          }
-        });
-        var refreshRate = ctrl.panel.refreshRate;
-
-        if (refreshRate > 0 && ~~refreshRate === refreshRate) {
-          // Make sure that panel only gets refreshed according to the specified
-          // interval.
-          if (ctrl.refreshTimeout) {
-            clearTimeout(ctrl.refreshTimeout);
-            ctrl.refreshTimeout = null;
-          }
-
-          ctrl.refreshTimeout = setTimeout(function () {
-            // Only update if the refresh rate remains unchanged
-            if (refreshRate === ctrl.panel.refreshRate) {
-              ctrl.updateView();
-            }
-          }, refreshRate * 1e3);
+      if (refreshRate > 0 && ~~refreshRate === refreshRate) {
+        // Make sure that panel only gets refreshed according to the specified
+        // interval.
+        if (ctrl.refreshTimeout) {
+          clearTimeout(ctrl.refreshTimeout);
+          ctrl.refreshTimeout = null;
         }
+
+        ctrl.refreshTimeout = setTimeout(function () {
+          // Only update if the refresh rate remains unchanged
+          if (refreshRate === ctrl.panel.refreshRate) {
+            ctrl.updateView();
+          }
+        }, refreshRate * 1e3);
       }
     }
     /**
@@ -426,7 +439,12 @@ function (_MetricsPanelCtrl) {
     key: "getVueScope",
     value: function getVueScope() {
       var ctrl = this;
-      return _lodash.default.cloneDeep({
+
+      var result = _lodash.default.cloneDeep({
+        allDashboards: [],
+        dashboard: JS.filter(ctrl.dashboard, function (value) {
+          return JS.isPrimitive(value);
+        }),
         dataset: ctrl.dataset,
         datasets: ctrl.datasets,
         datasetsById: ctrl.datasetsById,
@@ -441,7 +459,7 @@ function (_MetricsPanelCtrl) {
             return decodeURIComponent((value + '').replace(/\+/g, '%20'));
           },
           toParams: function toParams(objValues, opt_prefixVar) {
-            var _this3 = this;
+            var _this4 = this;
 
             return Object.entries(objValues).reduce(function (arrParams, _ref) {
               var _ref2 = _slicedToArray(_ref, 2),
@@ -449,7 +467,7 @@ function (_MetricsPanelCtrl) {
                   value = _ref2[1];
 
               return arrParams.concat(JS.toArray(value).map(function (value) {
-                return _this3.encode((opt_prefixVar ? 'var-' : '') + key) + '=' + _this3.encode(value);
+                return _this4.encode((opt_prefixVar ? 'var-' : '') + key) + '=' + _this4.encode(value);
               }));
             }, []).join('&');
           },
@@ -512,8 +530,39 @@ function (_MetricsPanelCtrl) {
           date = new Date(date);
           opt_tzOffset = opt_tzOffset == null ? date.getTimezoneOffset() : opt_tzOffset;
           return new Date(+date + opt_tzOffset * 6e4);
+        },
+        onError: function onError(err, info) {
+          ctrl.renderError('VueJS Error', err.message, true);
+          console.error('VueHtmlPanelCtrl error:', {
+            err: err,
+            info: info
+          });
+        },
+        keyRows: function keyRows(rows, hasher) {
+          hasher = normalizeHasher(hasher);
+          return rows.reduce(function (carry, row) {
+            var key = hasher(row);
+            carry[key] = _lodash.default.has(carry, key) ? carry[key].concat([row]) : [row];
+            return carry;
+          }, {});
+        },
+        indexRows: function indexRows(rows, hasher) {
+          hasher = normalizeHasher(hasher);
+          var keys = rows.map(function (row) {
+            return hasher(row);
+          });
+
+          var uniqueKeys = _lodash.default.uniq(keys);
+
+          return rows.reduce(function (carry, row, rowIndex) {
+            var realIndex = uniqueKeys.indexOf(keys[rowIndex]);
+            carry[realIndex] = _lodash.default.has(carry, realIndex) ? carry[realIndex].concat([row]) : [row];
+            return carry;
+          }, []);
         }
       });
+
+      return result;
     }
   }, {
     key: "onDataError",
@@ -529,8 +578,8 @@ function (_MetricsPanelCtrl) {
 
   }, {
     key: "onDataReceived",
-    value: function onDataReceived(dataList, a, b) {
-      var _this4 = this;
+    value: function onDataReceived(dataList) {
+      var _this5 = this;
 
       this.datasets = this.dataset = [];
       this.datasetsById = {};
@@ -550,7 +599,7 @@ function (_MetricsPanelCtrl) {
             var colNames = columns.map(function (c) {
               return 'string' === typeof c ? c : c.text;
             });
-            _this4.datasetsById[refId] = dataset = {
+            _this5.datasetsById[refId] = dataset = {
               columnNames: colNames,
               rows: rows.map(function (row) {
                 return row.reduceRight(function (carry, cell, cellIndex) {
@@ -561,7 +610,7 @@ function (_MetricsPanelCtrl) {
               raw: data
             };
           } else {
-            dataset = _this4.datasetsById[refId] = _this4.datasetsById[refId] || {
+            dataset = _this5.datasetsById[refId] = _this5.datasetsById[refId] || {
               columnNames: ['value', 'time', 'metric'],
               rows: [],
               raw: [],
@@ -578,7 +627,7 @@ function (_MetricsPanelCtrl) {
 
           if (datasetIndex < 0) {
             datasetIndex = datasetNames.push(refId) - 1;
-            _this4.datasets[datasetIndex] = _this4.dataset[datasetIndex] = dataset;
+            _this5.datasets[datasetIndex] = _this5.dataset[datasetIndex] = dataset;
           }
         });
       }
@@ -595,10 +644,22 @@ function (_MetricsPanelCtrl) {
   }]);
 
   return VueHtmlPanelCtrl;
-}(_sdk.MetricsPanelCtrl); // Allows for error handling in vueToHTML().
-
+}(_sdk.MetricsPanelCtrl);
 
 exports.VueHtmlPanelCtrl = VueHtmlPanelCtrl;
+
+function getAllDashboards(callback) {
+  getApiData("search", callback);
+}
+
+function getApiData(id, callback) {
+  jQuery.ajax("/api/".concat(id), {
+    complete: function complete(result, statusText) {
+      callback(result.responseJSON || result, statusText === 'success');
+    }
+  });
+} // Allows for error handling in vueToHTML().
+
 
 Vue.config.errorHandler = function (err, vm, info) {
   if (vm && vm.onError) {

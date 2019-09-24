@@ -1,5 +1,8 @@
 # Changelog
 
+- **v1.7.4**
+  - Fixed critical issue which prevented updated data from refreshing in the view.
+
 - **v1.7.3**
   - Fixed critical issue which caused a memory leak if using multiple Vues with refresh rates.
 
