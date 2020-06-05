@@ -228,7 +228,7 @@ export class VueHtmlPanelCtrl extends MetricsPanelCtrl {
     let { panel } = ctrl;
     let { refreshRate } = panel;
     
-    let jElemPC = ctrl.panelElement;
+    let jElemPC = ctrl.element;
     let elemPC = jElemPC[0];
     let elem = JS.dom({ _: 'div' });
     let cls = ('_' + Math.random()).replace(/0\./, +new Date);

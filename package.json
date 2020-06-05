@@ -1,7 +1,7 @@
 {
   "name": "westc-vuehtml-panel",
   "private": true,
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "Create a highly customizable panel using Vue.js.",
   "repository": {
     "type": "git",

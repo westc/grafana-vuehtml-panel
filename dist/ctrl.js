@@ -21,15 +21,17 @@ var Vue = _interopRequireWildcard(require("./external/vue.min"));
 
 var _config = _interopRequireDefault(require("app/core/config"));
 
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
+function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function _getRequireWildcardCache() { return cache; }; return cache; }
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; if (obj != null) { var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj["default"] = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
 
 function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
 
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
 
-function _iterableToArrayLimit(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+function _iterableToArrayLimit(arr, i) { if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) { return; } var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
@@ -114,7 +116,7 @@ function (_MetricsPanelCtrl) {
     _this = _possibleConstructorReturn(this, _getPrototypeOf(VueHtmlPanelCtrl).call(this, $scope, $injector));
     _this.$rootScope = $rootScope;
 
-    _lodash.default.defaultsDeep(_this.panel, DEFAULT_PANEL_SETTINGS); // If panel.emIsContentHeight was used, convert it to panel.emType.
+    _lodash["default"].defaultsDeep(_this.panel, DEFAULT_PANEL_SETTINGS); // If panel.emIsContentHeight was used, convert it to panel.emType.
 
 
     var emIsContentHeight = _this.panel.emIsContentHeight;
@@ -337,7 +339,7 @@ function (_MetricsPanelCtrl) {
       var ctrl = this;
       var panel = ctrl.panel;
       var refreshRate = panel.refreshRate;
-      var jElemPC = ctrl.panelElement;
+      var jElemPC = ctrl.element;
       var elemPC = jElemPC[0];
       var elem = JS.dom({
         _: 'div'
@@ -352,7 +354,7 @@ function (_MetricsPanelCtrl) {
         return 'function' !== typeof value;
       });
 
-      var vueScopeMethods = _lodash.default.extend(JS.filter(vueScope, function (value) {
+      var vueScopeMethods = _lodash["default"].extend(JS.filter(vueScope, function (value) {
         return 'function' === typeof value;
       }), {
         getVue: function getVue() {
@@ -384,7 +386,7 @@ function (_MetricsPanelCtrl) {
       });
 
       if (myVue) {
-        _lodash.default.extend(myVue.rawTemplate, templateValues);
+        _lodash["default"].extend(myVue.rawTemplate, templateValues);
       } else {
         jElemPC.html('').append(elem);
         myVue = ctrl.vue = new Vue({
@@ -440,7 +442,7 @@ function (_MetricsPanelCtrl) {
     value: function getVueScope() {
       var ctrl = this;
 
-      var result = _lodash.default.cloneDeep({
+      var result = _lodash["default"].cloneDeep({
         allDashboards: [],
         dashboard: JS.filter(ctrl.dashboard, function (value) {
           return JS.isPrimitive(value);
@@ -450,7 +452,7 @@ function (_MetricsPanelCtrl) {
         datasetsById: ctrl.datasetsById,
         panel: ctrl.panel.getOptionsToRemember(),
         JS: JS,
-        themeType: _config.default.theme.type,
+        themeType: _config["default"].theme.type,
         url: {
           encode: function encode(value) {
             return encodeURIComponent(value + '').replace(/%20/g, '+');
@@ -542,7 +544,7 @@ function (_MetricsPanelCtrl) {
           hasher = normalizeHasher(hasher);
           return rows.reduce(function (carry, row) {
             var key = hasher(row);
-            carry[key] = _lodash.default.has(carry, key) ? carry[key].concat([row]) : [row];
+            carry[key] = _lodash["default"].has(carry, key) ? carry[key].concat([row]) : [row];
             return carry;
           }, {});
         },
@@ -552,11 +554,11 @@ function (_MetricsPanelCtrl) {
             return hasher(row);
           });
 
-          var uniqueKeys = _lodash.default.uniq(keys);
+          var uniqueKeys = _lodash["default"].uniq(keys);
 
           return rows.reduce(function (carry, row, rowIndex) {
             var realIndex = uniqueKeys.indexOf(keys[rowIndex]);
-            carry[realIndex] = _lodash.default.has(carry, realIndex) ? carry[realIndex].concat([row]) : [row];
+            carry[realIndex] = _lodash["default"].has(carry, realIndex) ? carry[realIndex].concat([row]) : [row];
             return carry;
           }, []);
         }

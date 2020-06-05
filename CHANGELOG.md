@@ -1,5 +1,8 @@
 # Changelog
 
+- **v1.8.1**
+  - Critical fix related to panel not rendering in grafana v6.7
+
 - **v1.8.0**
   - Added a reference to `dashboard` (for the current dashboard) and `allDashboards` for an array of all of the dashboards.
   - Updated YourJS (`JS`) to v2.21.0.

@@ -62,5 +62,5 @@ module.exports = function(grunt) {
 
     });
 
-    grunt.registerTask('default', ['clean', 'copy:src_to_dist', 'copy:img_to_dist', 'copy:pluginDef', 'copy:externals', 'babel']);
+    grunt.registerTask('default', ['clean', 'copy:src_to_dist', 'copy:img_to_dist', 'copy:pluginDef', 'copy:external', 'babel']);
 };
