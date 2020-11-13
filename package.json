@@ -13,8 +13,8 @@
   "license": "MIT",
   "devDependencies": {
     "@grafana/data": "next",
-    "@grafana/ui": "next",
     "@grafana/toolkit": "next",
+    "@grafana/ui": "next",
     "@types/grafana": "github:CorpGlory/types-grafana.git"
   },
   "resolutions": {
@@ -22,5 +22,9 @@
   },
   "engines": {
     "node": ">=12 <13"
+  },
+  "dependencies": {
+    "@babel/preset-env": "^7.12.1",
+    "babel-loader": "^8.2.1"
   }
 }

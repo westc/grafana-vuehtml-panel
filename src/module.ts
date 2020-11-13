@@ -9,7 +9,10 @@ import config from 'grafana/app/core/config';
 import jQuery from 'jquery';
 import { DataFrame } from '@grafana/data';
 
-const SEL_DISABLE_DOWNLOAD_CSV = '<llow-csv><ble-csv><llow-download><ble-download>'.replace(/<(.+?)>/g, ':not([data-disa$1])');
+const SEL_DISABLE_DOWNLOAD_CSV = '<llow-csv><ble-csv><llow-download><ble-download>'.replace(
+  /<(.+?)>/g,
+  ':not([data-disa$1])'
+);
 
 const DEFAULT_PANEL_SETTINGS = {
   html: '<h2>Output of available datasets:</h2>\n<div><pre>{{ JSON.stringify(dataset, null, 2) }}</pre></div>',
@@ -209,7 +212,9 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
       .reduce((carry, table, index) => {
         if (jQuery(table).is(SEL_DISABLE_DOWNLOAD_CSV)) {
           carry.push({
-            text: table.getAttribute('data-title') ? `Export "${table.getAttribute('data-title')}" As CSV` : `Export Table #${index + 1} As CSV`,
+            text: table.getAttribute('data-title')
+              ? `Export "${table.getAttribute('data-title')}" As CSV`
+              : `Export Table #${index + 1} As CSV`,
             icon: 'fa fa-fw fa-table',
             click: `ctrl.csvifyTable(${index})`,
           });
@@ -399,7 +404,8 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
       { headers: columnNames }
     );
     let blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
-    let fileName = this.panel.title + JS.formatDate(new Date(), " (YYYY-MM-DD 'at' H.mm.ss)") + `.dataset-${data.raw.refId}.csv`;
+    let fileName =
+      this.panel.title + JS.formatDate(new Date(), " (YYYY-MM-DD 'at' H.mm.ss)") + `.dataset-${data.raw.refId}.csv`;
     saveAs(blob, fileName);
   }
 
@@ -454,7 +460,11 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
         toParams(objValues, opt_prefixVar) {
           return Object.entries(objValues)
             .reduce((arrParams, [key, value]) => {
-              return arrParams.concat(JS.toArray(value).map(value => this.encode((opt_prefixVar ? 'var-' : '') + key) + '=' + this.encode(value)));
+              return arrParams.concat(
+                JS.toArray(value).map(
+                  value => this.encode((opt_prefixVar ? 'var-' : '') + key) + '=' + this.encode(value)
+                )
+              );
             }, [])
             .join('&');
         },
@@ -475,7 +485,8 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
         getVarValues(opt_filter, opt_negate) {
           if (opt_filter && 'function' !== typeof opt_filter) {
             let arrFilter = JS.toArray(opt_filter);
-            opt_filter = key => arrFilter.some(filter => (filter instanceof RegExp ? filter.test(key) : filter === key));
+            opt_filter = key =>
+              arrFilter.some(filter => (filter instanceof RegExp ? filter.test(key) : filter === key));
           }
 
           return ctrl.templateSrv.variables.reduce((values, variable) => {
