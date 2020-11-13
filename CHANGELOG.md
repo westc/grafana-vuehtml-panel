@@ -1,5 +1,8 @@
 # Changelog
 
+- **2.0.1**
+  - Include the `dist/` directory again.
+
 - **2.0.0**
   - Making plugin work for Grafana 7.2.1 (or higher).
   - Added [dom-to-image](https://github.com/tsayen/dom-to-image) to make screenshots work.
