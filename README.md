@@ -2,15 +2,6 @@
 
 Create a highly customizable panel using Vue.js.
 
-## Installation
-
-clone this repository into your plugin directory
-
-```
-git clone https://github.com/westc/grafana-vuehtml-panel.git
-brew services restart grafana
-```
-
 ## Example (PostgreSQL) Query
 
 The following is an example query that I ran to create example output:
@@ -161,3 +152,36 @@ A table containing all of the values of the person's row (with the exception of 
 
 ## License
 MIT
+
+### Building this plugin
+
+This plugin leverages the grafana-toolkit to simplify building and packaging a plugin.
+
+Change to a compatible version of NodeJS (12 or 13):
+```BASH
+nvm use 12
+```
+
+Install module dependencies:
+
+```BASH
+yarn
+```
+
+Build plugin in production mode:
+
+```BASH
+yarn build
+```
+
+Build plugin in development mode:
+
+```BASH
+yarn dev
+```
+
+Build plugin in development mode, watching for changes:
+
+```BASH
+yarn watch
+```

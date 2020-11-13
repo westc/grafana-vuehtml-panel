@@ -1,5 +1,12 @@
 # Changelog
 
+- **2.0.0**
+  - Making plugin work for Grafana 7.2.1 (or higher).
+  - Added [dom-to-image](https://github.com/tsayen/dom-to-image) to make screenshots work.
+  - Removed [html2canvas](https://github.com/niklasvh/html2canvas) because it stopped working with how Grafana is setup.
+  - Added ability to save screenshot as JPEG and SVG.
+  - Removed ability to save datasets as CSV since this functionality is now built in.
+
 - **v1.8.0**
   - Added a reference to `dashboard` (for the current dashboard) and `allDashboards` for an array of all of the dashboards.
   - Updated YourJS (`JS`) to v2.21.0.

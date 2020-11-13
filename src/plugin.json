@@ -24,12 +24,13 @@
         "url": "http://yourjs.com/"
       }
     ],
-    "version": "1.8.0",
-    "updated": "2019-09-24"
+    "screenshots": [],
+    "version": "%VERSION%",
+    "updated": "%TODAY%"
   },
 
   "dependencies": {
-    "grafanaVersion": "6.x.x",
+    "grafanaVersion": "6.3.x",
     "plugins": [ ]
   }
 }
