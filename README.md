@@ -157,7 +157,7 @@ MIT
 
 This plugin leverages the grafana-toolkit to simplify building and packaging a plugin.
 
-Change to a compatible version of NodeJS (12 or 13):
+Change to a compatible version of NodeJS:
 ```BASH
 nvm use 12
 ```

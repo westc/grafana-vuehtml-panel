@@ -1,6 +1,6 @@
 import { MetricsPanelCtrl } from 'grafana/app/plugins/sdk';
-import {cloneDeep, defaultsDeep, extend, has, uniq} from 'lodash';
-import {saveAs} from './external/FileSaver.min.js';
+import { cloneDeep, defaultsDeep, extend, has, uniq } from 'lodash';
+import { saveAs } from './external/FileSaver.min.js';
 import * as JS from './external/YourJS.JS.min';
 import domtoimage from './external/dom-to-image.min';
 import { pseudoCssToJSON, toCSV, tableToArray } from './helper-functions';
@@ -19,13 +19,13 @@ const DEFAULT_PANEL_SETTINGS = {
   canDownloadAsPNG: true,
   canDownloadAsSVG: false,
   emType: null,
-  refreshRate: null
+  refreshRate: null,
 };
 
 const REFRESH_RATE_OPTIONS = [
   { value: null, text: 'Never' },
   { value: 1, text: 'Every second' },
-  { value: 60, text: 'Every minute' }
+  { value: 60, text: 'Every minute' },
 ];
 
 const EM_TYPES = [
@@ -34,7 +34,7 @@ const EM_TYPES = [
   { value: 'CONTENT-WIDTH', text: 'Content Width' },
   { value: 'CONTENT-MIN-DIM', text: 'Minimum Content Dimension' },
   { value: 'CONTENT-MAX-DIM', text: 'Maximum Content Dimension' },
-  { value: 'CONTENT-AVG-DIM', text: 'Average of Content Dimensions' }
+  { value: 'CONTENT-AVG-DIM', text: 'Average of Content Dimensions' },
 ];
 
 function normalizeHasher(hasher) {
@@ -42,8 +42,8 @@ function normalizeHasher(hasher) {
   return 'function' === hasherType
     ? hasher
     : 'string' === hasherType
-      ? row => JSON.stringify(row[hasher])
-      : row => JSON.stringify(hasher.map(item => row[item]));
+    ? row => JSON.stringify(row[hasher])
+    : row => JSON.stringify(hasher.map(item => row[item]));
 }
 
 function getAllDashboards(callback) {
@@ -54,7 +54,7 @@ function getApiData(id, callback) {
   jQuery.ajax(`/api/${id}`, {
     complete(result, statusText) {
       callback(result.responseJSON || result, statusText === 'success');
-    }
+    },
   });
 }
 
@@ -65,8 +65,8 @@ interface KeyValue {
 
 export default class SimpleCtrl extends MetricsPanelCtrl {
   dataFormat!: string;
-  dataset!: Array<any>;
-  datasets!: Array<any>;
+  dataset!: any[];
+  datasets!: any[];
   datasetsById!: {};
   element!: any;
   panelElement!: any;
@@ -80,8 +80,8 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
   // Simple example showing the last value of all data
   firstValues: KeyValue[] = [];
 
-  REFRESH_RATE_OPTIONS?: ({ value: null; text: string; } | { value: number; text: string; })[];
-  EM_TYPES?: ({ value: null; text: string; } | { value: string; text: string; })[];
+  REFRESH_RATE_OPTIONS?: Array<{ value: null; text: string } | { value: number; text: string }>;
+  EM_TYPES?: Array<{ value: null; text: string } | { value: string; text: string }>;
 
   /** @ngInject */
   constructor($scope, $injector, $rootScope) {
@@ -134,11 +134,11 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
 
   /**
    * Executed whenever data is received from the database for this panel.
-   * @param {Array} dataList 
+   * @param {Array} dataList
    *   An array of objects containing the data that is collected from the
    *   database.
    */
-  onDataReceived(dataList: Array<any>) {
+  onDataReceived(dataList: any[]) {
     this.datasets = this.dataset = [];
     this.datasetsById = {};
 
@@ -146,12 +146,12 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
       let datasetNames: string[] = [];
 
       dataList.forEach(data => {
-        let { refId, datapoints, target, columns, rows }: {refId: string, [key: string]: any } = data;
+        let { refId, datapoints, target, columns, rows }: { refId: string; [key: string]: any } = data;
         let datasetIndex = datasetNames.indexOf(refId);
         let dataset;
 
         if (data.type === 'table') {
-          let colNames = columns.map(c => 'string' === typeof c ? c : c.text);
+          let colNames = columns.map(c => ('string' === typeof c ? c : c.text));
 
           this.datasetsById[refId] = dataset = {
             columnNames: colNames,
@@ -161,12 +161,15 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
                 return carry;
               }, {});
             }),
-            raw: data
+            raw: data,
           };
-        }
-        else {
-          dataset = this.datasetsById[refId] = this.datasetsById[refId]
-            || { columnNames: ['value', 'time', 'metric'], rows: [], raw: [], refId };
+        } else {
+          dataset = this.datasetsById[refId] = this.datasetsById[refId] || {
+            columnNames: ['value', 'time', 'metric'],
+            rows: [],
+            raw: [],
+            refId,
+          };
 
           datapoints.forEach(row => {
             dataset.rows.push(row.slice(0, 2).concat([target]));
@@ -199,20 +202,20 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
    * Executed when panel actions should be loaded.
    * @param {Array} actions Actions to be added.
    */
-  onInitPanelActions(actions: Array<any>) {
-    let tablesSubmenu = this.panelElement.find('table').toArray().reduce(
-      (carry, table, index) => {
+  onInitPanelActions(actions: any[]) {
+    let tablesSubmenu = this.panelElement
+      .find('table')
+      .toArray()
+      .reduce((carry, table, index) => {
         if (jQuery(table).is(SEL_DISABLE_DOWNLOAD_CSV)) {
           carry.push({
             text: table.getAttribute('data-title') ? `Export "${table.getAttribute('data-title')}" As CSV` : `Export Table #${index + 1} As CSV`,
             icon: 'fa fa-fw fa-table',
-            click: `ctrl.csvifyTable(${index})`
+            click: `ctrl.csvifyTable(${index})`,
           });
         }
         return carry;
-      },
-      []
-    );
+      }, []);
     if (tablesSubmenu.length) {
       actions.push.apply(actions, [{ divider: true, role: 'Editor' }].concat(tablesSubmenu));
     }
@@ -238,21 +241,21 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
       actions.push({
         text: 'Screenshot As JPEG',
         icon: 'fa fa-fw fa-image',
-        click: 'ctrl.downloadJPEG()'
+        click: 'ctrl.downloadJPEG()',
       });
     }
     if (this.panel.canDownloadAsPNG) {
       actions.push({
         text: 'Screenshot As PNG',
         icon: 'fa fa-fw fa-image',
-        click: 'ctrl.downloadPNG()'
+        click: 'ctrl.downloadPNG()',
       });
     }
     if (this.panel.canDownloadAsSVG) {
       actions.push({
         text: 'Screenshot As SVG',
         icon: 'fa fa-fw fa-image',
-        click: 'ctrl.downloadSVG()'
+        click: 'ctrl.downloadSVG()',
       });
     }
   }
@@ -266,14 +269,14 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
     let ctrl = this;
     let { panel } = ctrl;
     let { refreshRate } = panel;
-    
+
     let jElemPC = ctrl.panelElement;
     let elemPC = jElemPC[0];
     let elem = JS.dom({ _: 'div' });
-    let cls = ('_' + Math.random()).replace(/0\./, +new Date + '');
-    
+    let cls = ('_' + Math.random()).replace(/0\./, +new Date() + '');
+
     ctrl.render(); // Recalculates `em` size if it is supposed to.
-    
+
     // Data available to the HTML code.
     let myVue = ctrl.vue;
     let vueScope = ctrl.getVueScope();
@@ -283,14 +286,14 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
       {
         getVue() {
           return myVue;
-        }
+        },
       }
     );
 
     let templateValues = {
       template: `<div>${panel.html}</div>`,
       data: vueScopeData,
-      methods: vueScopeMethods
+      methods: vueScopeMethods,
     };
 
     // Remove the old stylesheet from the document if it exists.
@@ -314,8 +317,7 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
 
     if (myVue) {
       extend(myVue.rawTemplate, templateValues);
-    }
-    else {
+    } else {
       jElemPC.html('').append(elem);
 
       myVue = ctrl.vue = new Vue({
@@ -323,7 +325,7 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
         template: `<div :is="template"></div>`,
         data() {
           return {
-            rawTemplate: templateValues
+            rawTemplate: templateValues,
           };
         },
         computed: {
@@ -331,13 +333,13 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
             let { template, data, methods } = this.rawTemplate;
             return {
               template,
-              data: function () {
+              data: function() {
                 return data;
               },
-              methods
+              methods,
             };
-          }
-        }
+          },
+        },
       });
     }
 
@@ -349,7 +351,7 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
         ctrl.refreshTimeout = undefined;
       }
 
-      ctrl.refreshTimeout = setTimeout(function () {
+      ctrl.refreshTimeout = setTimeout(function() {
         // Only update if the refresh rate remains unchanged
         if (refreshRate === ctrl.panel.refreshRate) {
           ctrl.updateView();
@@ -359,11 +361,11 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
   }
 
   downloadJPEG() {
-    domtoimage.toJpeg(this.panelElement.find('div')[0], {quality: 0.85}).then(uri => {
+    domtoimage.toJpeg(this.panelElement.find('div')[0], { quality: 0.85 }).then(uri => {
       JS.dom({
         _: 'a',
         href: uri,
-        download: this.panel.title + JS.formatDate(new Date, " (YYYY-MM-DD 'at' H.mm.ss)") + '.screenshot.jpeg'
+        download: this.panel.title + JS.formatDate(new Date(), " (YYYY-MM-DD 'at' H.mm.ss)") + '.screenshot.jpeg',
       }).click();
     });
   }
@@ -373,7 +375,7 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
       JS.dom({
         _: 'a',
         href: uri,
-        download: this.panel.title + JS.formatDate(new Date, " (YYYY-MM-DD 'at' H.mm.ss)") + '.screenshot.png'
+        download: this.panel.title + JS.formatDate(new Date(), " (YYYY-MM-DD 'at' H.mm.ss)") + '.screenshot.png',
       }).click();
     });
   }
@@ -383,7 +385,7 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
       JS.dom({
         _: 'a',
         href: uri,
-        download: this.panel.title + JS.formatDate(new Date, " (YYYY-MM-DD 'at' H.mm.ss)") + '.screenshot.svg'
+        download: this.panel.title + JS.formatDate(new Date(), " (YYYY-MM-DD 'at' H.mm.ss)") + '.screenshot.svg',
       }).click();
     });
   }
@@ -394,18 +396,18 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
 
     let csvContent = toCSV(
       data.rows.map(row => columnNames.map(cName => row[cName])),
-          { headers: columnNames }
+      { headers: columnNames }
     );
     let blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
-    let fileName = this.panel.title + JS.formatDate(new Date, " (YYYY-MM-DD 'at' H.mm.ss)") + `.dataset-${data.raw.refId}.csv`;
+    let fileName = this.panel.title + JS.formatDate(new Date(), " (YYYY-MM-DD 'at' H.mm.ss)") + `.dataset-${data.raw.refId}.csv`;
     saveAs(blob, fileName);
   }
 
   csvifyTable(index) {
     let table = this.panelElement.find('table').toArray()[index];
-    let title = table.getAttribute('data-title') || (this.panel.title + ` Table ${index + 1}`);
+    let title = table.getAttribute('data-title') || this.panel.title + ` Table ${index + 1}`;
     let blob = new Blob([toCSV(tableToArray(table))], { type: 'text/csv;charset=utf-8' });
-    let fileName = title + JS.formatDate(new Date, " (YYYY-MM-DD 'at' H.mm.ss)") + `.csv`;
+    let fileName = title + JS.formatDate(new Date(), " (YYYY-MM-DD 'at' H.mm.ss)") + `.csv`;
     saveAs(blob, fileName);
   }
 
@@ -450,16 +452,14 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
           return decodeURIComponent((value + '').replace(/\+/g, '%20'));
         },
         toParams(objValues, opt_prefixVar) {
-          return Object.entries(objValues).reduce((arrParams, [key, value]) => {
-            return arrParams.concat(
-              JS.toArray(value).map(
-                value => this.encode((opt_prefixVar ? 'var-' : '') + key) + '=' + this.encode(value)
-              )
-            );
-          }, []).join('&');
+          return Object.entries(objValues)
+            .reduce((arrParams, [key, value]) => {
+              return arrParams.concat(JS.toArray(value).map(value => this.encode((opt_prefixVar ? 'var-' : '') + key) + '=' + this.encode(value)));
+            }, [])
+            .join('&');
         },
         getTimeValues(opt_name) {
-          let result: {from?: any, to?: any} = {};
+          let result: { from?: any; to?: any } = {};
           let { from, to } = ctrl.timeSrv.timeRangeForUrl();
           if (opt_name !== 'to') {
             result.from = from;
@@ -475,32 +475,27 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
         getVarValues(opt_filter, opt_negate) {
           if (opt_filter && 'function' !== typeof opt_filter) {
             let arrFilter = JS.toArray(opt_filter);
-            opt_filter = key => arrFilter.some(
-              filter => filter instanceof RegExp ? filter.test(key) : (filter === key)
-            );
+            opt_filter = key => arrFilter.some(filter => (filter instanceof RegExp ? filter.test(key) : filter === key));
           }
-          
-          return ctrl.templateSrv.variables.reduce(
-            (values, variable) => {
-              // At times current.value is a string and at times it is an array.
-              let key = variable.name;
-              let varValues = JS.toArray(variable.current.value);
-              let isAll = variable.includeAll && varValues.length === 1 && varValues[0] === '$__all';
-              varValues = isAll ? [variable.current.text] : varValues;
-              if (opt_filter) {
-                varValues = varValues.filter(value => !!opt_filter(key, value) === !opt_negate);
-              }
-              if (varValues.length) {
-                values[key] = varValues;
-              }
-              return values;
-            },
-            {}
-          );
+
+          return ctrl.templateSrv.variables.reduce((values, variable) => {
+            // At times current.value is a string and at times it is an array.
+            let key = variable.name;
+            let varValues = JS.toArray(variable.current.value);
+            let isAll = variable.includeAll && varValues.length === 1 && varValues[0] === '$__all';
+            varValues = isAll ? [variable.current.text] : varValues;
+            if (opt_filter) {
+              varValues = varValues.filter(value => !!opt_filter(key, value) === !opt_negate);
+            }
+            if (varValues.length) {
+              values[key] = varValues;
+            }
+            return values;
+          }, {});
         },
         getVarParams(opt_filter, opt_negate) {
           return this.toParams(this.getVarValues(opt_filter, opt_negate), true);
-        }
+        },
       },
       offsetDateTZ(date, opt_tzOffset) {
         date = new Date(date);
@@ -528,29 +523,33 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
           carry[realIndex] = has(carry, realIndex) ? carry[realIndex].concat([row]) : [row];
           return carry;
         }, []);
-      }
+      },
     });
-    
+
     return result;
   }
 
   renderError(title, message, isMonospace) {
-    this.panelElement.html('').append(JS.dom({
-      _: 'div', style: { display: 'flex', alignItems: 'center', textAlign: 'center', height: '100%' }, $: [
-        {
-          _: 'div',
-          cls: 'alert alert-error',
-          style: { margin: '0px auto' },
-          $: {
+    this.panelElement.html('').append(
+      JS.dom({
+        _: 'div',
+        style: { display: 'flex', alignItems: 'center', textAlign: 'center', height: '100%' },
+        $: [
+          {
             _: 'div',
-            $: [
-              { _: 'h2', style: { color: '#FFF' }, text: title },
-              { _: isMonospace ? 'pre' : 'div', text: message }
-            ]
-          }
-        }
-      ]
-    }));
+            cls: 'alert alert-error',
+            style: { margin: '0px auto' },
+            $: {
+              _: 'div',
+              $: [
+                { _: 'h2', style: { color: '#FFF' }, text: title },
+                { _: isMonospace ? 'pre' : 'div', text: message },
+              ],
+            },
+          },
+        ],
+      })
+    );
   }
 
   // 6.3+ get typed DataFrame directly
