@@ -1,9 +1,12 @@
 # Changelog
 
-- **2.0.1**
+- **v2.0.2**
+  - Fix the positioning of the wrapper.
+
+- **v2.0.1**
   - Include the `dist/` directory again.
 
-- **2.0.0**
+- **v2.0.0**
   - Making plugin work for Grafana 7.2.1 (or higher).
   - Added [dom-to-image](https://github.com/tsayen/dom-to-image) to make screenshots work.
   - Removed [html2canvas](https://github.com/niklasvh/html2canvas) because it stopped working with how Grafana is setup.

@@ -216,6 +216,7 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
               ? `Export "${table.getAttribute('data-title')}" As CSV`
               : `Export Table #${index + 1} As CSV`,
             icon: 'fa fa-fw fa-table',
+            iconClassName: 'info-circle',
             click: `ctrl.csvifyTable(${index})`,
           });
         }
@@ -309,9 +310,16 @@ export default class SimpleCtrl extends MetricsPanelCtrl {
     }
 
     // Add the nested CSS to the panel.
-    ctrl.stylesheet = JS.css(JSON.parse(pseudoCssToJSON(panel.css)), '.' + cls);
+    ctrl.stylesheet = JS.css(JSON.parse(pseudoCssToJSON(panel.css)), `.${cls}`);
 
+    // Add the randomized class name to the wrapper element while removing the
+    // previous class name if it is there.
     elemPC.className = elemPC.className.replace(/(^|\s+)_\d+(?=\s+|$)/g, ' ').trim() + ' ' + cls;
+
+    Object.assign(elemPC.style, {
+      position: 'relative',
+      overflow: 'auto',
+    });
 
     // Gets all dashboards via the API.
     getAllDashboards((data, isSuccess) => {
